@@ -93,13 +93,10 @@ fn main() {
 
   let mut prev_keys = HashSet::new();
 
-  let mut running = true;
-  while running {
+  'running: loop {
     for event in event_pump.poll_iter() {
       match event {
-        Event::Quit {..} => {
-          running = false;
-        },
+        Event::Quit {..} => break 'running,
         _ => {}
       }
     }
@@ -112,31 +109,24 @@ fn main() {
       .collect();
     let pressed = &keys - &prev_keys;
     if pressed.contains(&Keycode::Escape) {
-      running = false;
+      break 'running;
     }
-    let released = &prev_keys - &keys;
-    if !released.is_empty() {
-      println!("released: {:?}", released);
-    }
+    // let released = &prev_keys - &keys;
     prev_keys = keys;
 
-    // Update physics
+    // Update movement and animations
     for e in &enties {
       match e.phys {
         Some(p) => physies[p].update(ticks),
         _ => {}
       }
-    }
-
-    // Update visuals
-    for e in &enties {
       match e.rend {
         Some(r) => rendies[r].update(ticks),
         _ => {}
       }
     }
 
-    // Draw
+    // Draw ents with Renderable & Physics comp
     renderer.clear();
     for e in &enties {
       match (e.rend, e.phys) {
