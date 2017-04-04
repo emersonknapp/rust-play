@@ -1,4 +1,6 @@
 extern crate sdl2;
+#[macro_use]
+extern crate bitmask;
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -10,6 +12,15 @@ use sdl2::rect::Point;
 use sdl2::rect::Rect;
 
 type ID = usize;
+
+bitmask! {
+  mask ComponentMask: u32 where flags ComponentType {
+    NoComponent = 0,
+    Renderable = 1 << 0,
+    Physics = 1 << 1,
+    Input = 1 << 2,
+  }
+}
 
 struct Renderable {
   texture: sdl2::render::Texture,
@@ -46,9 +57,27 @@ impl PhysicsComponent {
   }
 }
 
-struct Entity {
-  rend: Option<ID>,
-  phys: Option<ID>,
+struct Input {
+}
+
+struct World {
+  next: ID,
+  masks: Vec<ComponentMask>,
+  rendies: Vec<Option<Renderable>>,
+  physies: Vec<Option<PhysicsComponent>>,
+  inputs: Vec<Option<Input>>,
+}
+
+impl World {
+  fn new() -> World {
+    World {
+      next: 0,
+      masks: Vec::new(),
+      rendies: Vec::new(),
+      physies: Vec::new(),
+      inputs: Vec::new(),
+    }
+  }
 }
 
 fn draw(renderer: &mut sdl2::render::Renderer, rend: &Renderable, phys: &PhysicsComponent) {
@@ -59,9 +88,37 @@ fn draw(renderer: &mut sdl2::render::Renderer, rend: &Renderable, phys: &Physics
     .unwrap();
 }
 
+fn character(world: &mut World, renderer: &sdl2::render::Renderer) -> ID {
+  let id = world.next;
+  let rend = Renderable::new(&renderer, "assets/animate.bmp");
+  let phys = PhysicsComponent::new(Point::new(320, 240));
+  let mask = ComponentType::Renderable | ComponentType::Physics;
+  world.next += 1;
+  world.masks.push(mask);
+  world.rendies.push(Some(rend));
+  world.physies.push(Some(phys));
+  world.inputs.push(None);
+  id
+}
+
+fn render(renderer: &mut sdl2::render::Renderer, ents: &Vec<ID>, world: &World) {
+    renderer.clear();
+    for e in ents {
+      // let renderer_mask = ComponentType::Physics | ComponentType::Renderable;
+      match (world.rendies.get(*e), world.physies.get(*e)) {
+        (Some(&Some(ref r)), Some(&Some(ref p))) => {
+          draw(renderer, &r, &p);
+        },
+        _ => {}
+      }
+    }
+    renderer.present();
+}
 
 fn main() {
+  let mut world = World::new();
 
+  // Create Systems
   let sdl_context = sdl2::init().unwrap();
   let video_subsystem = sdl_context.video().unwrap();
   let window = video_subsystem.window("SDL2", 640, 480)
@@ -76,20 +133,10 @@ fn main() {
   let mut timer = sdl_context.timer().unwrap();
   let mut event_pump = sdl_context.event_pump().unwrap();
 
-  let mut enties : Vec<Entity> = Vec::new();
-  let mut rendies : Vec<Renderable> = Vec::new();
-  let mut physies : Vec<PhysicsComponent> = Vec::new();
+  // Create Entities/Components
+  let mut enties : Vec<ID> = Vec::new();
 
-  let rend0 = Renderable::new(&renderer, "assets/animate.bmp");
-  let rend0_id = rendies.len();
-  rendies.push(rend0);
-
-  let phys0 = PhysicsComponent::new(Point::new(320, 240));
-  let phys0_id = physies.len();
-  physies.push(phys0);
-
-  let ent0 = Entity { rend: Some(rend0_id), phys: Some(phys0_id) };
-  enties.push(ent0);
+  enties.push(character(&mut world, &renderer));
 
   let mut prev_keys = HashSet::new();
 
@@ -114,27 +161,21 @@ fn main() {
     // let released = &prev_keys - &keys;
     prev_keys = keys;
 
-    // Update movement and animations
+    // Run Systems
+    // movement and animations
     for e in &enties {
-      match e.phys {
-        Some(p) => physies[p].update(ticks),
+      match world.physies[*e] {
+        Some(ref mut p) => p.update(ticks),
         _ => {}
       }
-      match e.rend {
-        Some(r) => rendies[r].update(ticks),
+      match world.rendies[*e] {
+        Some(ref mut r) => r.update(ticks),
         _ => {}
       }
     }
 
-    // Draw ents with Renderable & Physics comp
-    renderer.clear();
-    for e in &enties {
-      match (e.rend, e.phys) {
-        (Some(r), Some(p)) => draw(&mut renderer, &rendies[r], &physies[p]),
-        _ => {}
-      }
-    }
-    renderer.present();
+    // rendering
+    render(&mut renderer, &enties, &world);
 
     std::thread::sleep(Duration::from_millis(100));
   }

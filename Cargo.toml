@@ -8,3 +8,6 @@ authors = [ "Emerson Knapp <emerson.b.knapp@gmail.com>" ]
 version="0.29"
 default-features=false
 features = ["ttf","image","gfx","mixer"]
+
+[dependencies]
+bitmask="0.3.0"
