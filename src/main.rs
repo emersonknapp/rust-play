@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 extern crate sdl2;
 mod physics;
 
@@ -52,7 +53,6 @@ impl Renderable {
 //     }
 //     renderer.present();
 // }
-
 fn aabb_to_rect(a: &AABB) -> Rect {
   // TODO transform into render space
   Rect::new(
@@ -63,20 +63,87 @@ fn aabb_to_rect(a: &AABB) -> Rect {
   )
 }
 
-fn update_player(p: &mut MovingObject, keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>) {
-  p.speed.x = 0.;
-  if p.onGround && pressed.contains(&Keycode::Space) {
-    p.speed.y += 100.;
-  }
-  if keys_down.contains(&Keycode::Left) {
-    p.speed.x -= 100.;
-  }
-  if keys_down.contains(&Keycode::Right) {
-    p.speed.x += 100.;
+enum PlayerAction {
+  MoveLeft,
+  MoveRight,
+  Jump,
+}
+struct Player {
+
+}
+
+fn player_update(actions: &Vec<PlayerAction>, player: &mut MovingObject) {
+  player.speed.x = 0.;
+  for a in actions {
+    match a {
+      &PlayerAction::MoveLeft => player.speed.x -= 100.,
+      &PlayerAction::MoveRight => player.speed.x += 100.,
+      &PlayerAction::Jump => {
+        if player.onGround {
+          player.speed.y += 100.;
+        }
+      },
+    }
   }
 }
 
+fn player_input(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction) ) {
+  if pressed.contains(&Keycode::Space) {
+    do_action(PlayerAction::Jump);
+  }
+  if keys_down.contains(&Keycode::Left) {
+    do_action(PlayerAction::MoveLeft);
+  }
+  if keys_down.contains(&Keycode::Right) {
+    do_action(PlayerAction::MoveRight);
+  }
+}
+
+struct World {
+  player: MovingObject,
+  pending_actions: Vec<PlayerAction>,
+}
+
+impl World {
+  fn new() -> World {
+    let player = MovingObject {
+      pos: vec2::new(10., 10.),
+      speed: vec2::new(0., 0.),
+      bbox: AABB::new(vec2::new(10., 10.), vec2::new(20., 20.)),
+      onGround: true,
+    };
+    World {
+      player: player,
+      pending_actions: Vec::new(),
+    }
+  }
+  fn input(&mut self, keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>) {
+    let mut do_action = |a: PlayerAction| {
+      self.pending_actions.push(a);
+    };
+    player_input(&keys_down, &pressed, &mut do_action);
+  }
+  fn update(&mut self, _: f64, dt_seconds: f64) {
+    // TODO this is confusing, one is action resolution and the other is physics simulation
+    player_update(&self.pending_actions, &mut self.player);
+    self.player.update(dt_seconds);
+    self.pending_actions.clear();
+  }
+  fn draw(&mut self, renderer: &mut sdl2::render::Renderer) {
+    // TODO camera (flips/scales + translates from world coords to pixel coords)
+    let mut draw_color = Color::RGBA(255, 0, 0, 255);
+    if self.player.onGround {
+      draw_color = Color::RGBA(0, 0, 255, 255);
+    }
+    renderer.set_draw_color(draw_color);
+    let draw_rect = aabb_to_rect(&self.player.bbox);
+    let _ = renderer.fill_rect(draw_rect);
+  }
+}
+
+
 fn main() {
+  // sdl setup
   let sdl_context = sdl2::init().unwrap();
   let video_subsystem = sdl_context.video().unwrap();
   let window = video_subsystem.window("SDL2", 640, 480)
@@ -86,34 +153,32 @@ fn main() {
   let mut renderer = window.renderer()
     .accelerated().build().unwrap();
 
-
   let mut timer = sdl_context.timer().unwrap();
   let mut event_pump = sdl_context.event_pump().unwrap();
 
   let mut prev_keys = HashSet::new();
   let mut last_ticks = timer.ticks();
+  let mut ticks_leftover = 0;
 
-  // Game Setup
-  let mut player = MovingObject {
-    pos: vec2::new(10., 10.),
-    speed: vec2::new(0., 0.),
-    bbox: AABB::new(vec2::new(10., 10.), vec2::new(20., 20.)),
-    onGround: true,
-  };
-  // End Game Setup
+  // game init
+  let mut world = World::new();
+  let sim_dt = 10;
+  let sim_dt_seconds = sim_dt as f64 / 1000.;
 
   'running: loop {
+    let ticks = timer.ticks();
+    let time = ticks as f64 / 1000.;
+    let dt = ticks - last_ticks;
+    last_ticks = ticks;
+    ticks_leftover += dt;
+
+    // input
     for event in event_pump.poll_iter() {
       match event {
         Event::Quit {..} => break 'running,
         _ => {}
       }
     }
-    let ticks = timer.ticks();
-    let dt = ticks - last_ticks;
-    last_ticks = ticks;
-
-    // Input
     let keys: HashSet<Keycode> = event_pump.keyboard_state()
       .pressed_scancodes()
       .filter_map(Keycode::from_scancode)
@@ -124,31 +189,21 @@ fn main() {
     }
     // let released = &prev_keys - &keys;
 
-    // Game Input
-    update_player(&mut player, &keys, &pressed);
-    // End Game Input
-
-    // Game Update
-    player.update(dt as f64 / 1000.);
-    // End Game Update
-
+    // prepare for drawing
     renderer.set_draw_color(Color::RGBA(0,255,0,255));
     renderer.clear();
-    // Game Draw
-    let mut draw_color = Color::RGBA(255, 0, 0, 255);
-    if player.onGround {
-      draw_color = Color::RGBA(0, 0, 255, 255);
+
+    // invoke game logic
+    world.input(&keys, &pressed);
+    while ticks_leftover >= sim_dt {
+      world.update(time, sim_dt_seconds);
+      ticks_leftover -= sim_dt
     }
-    renderer.set_draw_color(draw_color);
-    let draw_rect = aabb_to_rect(&player.bbox);
-    let _ = renderer.fill_rect(draw_rect);
-    // End Game Draw
+    world.draw(&mut renderer);
+
+    // loop finalizing
     renderer.present();
-
-    // loop cleanup
     prev_keys = keys;
-
-    //std::thread::sleep(Duration::from_millis(100));
   }
 }
 
