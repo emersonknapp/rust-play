@@ -1,5 +1,4 @@
 #![allow(non_camel_case_types)]
-#![allow(dead_code)]
 #![allow(non_snake_case)]
 extern crate nalgebra as na;
 
@@ -9,6 +8,9 @@ pub struct AABB {
   pub center: vec2,
   pub halfSize: vec2,
 }
+
+// px/sec^2
+const GRAVITY: f64 = 600.;
 
 impl AABB {
   pub fn new(center: vec2, halfSize: vec2) -> AABB {
@@ -35,7 +37,7 @@ pub struct MovingObject {
 impl MovingObject {
   pub fn update(&mut self, dt_seconds: f64) {
     self.pos += self.speed * dt_seconds;
-    self.speed.y -= 200. * dt_seconds;
+    self.speed.y -= GRAVITY * dt_seconds;
 
     if self.pos.y <= self.bbox.halfSize.y {
       self.pos.y = self.bbox.halfSize.y;
