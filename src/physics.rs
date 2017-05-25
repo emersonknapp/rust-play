@@ -8,6 +8,14 @@ pub struct AABB {
   pub center: vec2,
   pub halfSize: vec2,
 }
+impl AABB {
+    pub fn bottom_left(&self) -> vec2 {
+        self.center - self.halfSize
+    }
+    pub fn top_right(&self) -> vec2 {
+        self.center + self.halfSize
+    }
+}
 
 // px/sec^2
 const GRAVITY: f64 = 600.;
