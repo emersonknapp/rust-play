@@ -1,49 +1,20 @@
 extern crate sdl2;
 mod physics;
 mod camera;
+mod common;
+mod render;
 
-use physics::{vec2, MovingObject, AABB};
-use camera::{Camera, Vec2};
+use common::{Vec2, AABB};
+use physics::{MovingObject};
+use camera::{Camera};
+use render::{Renderable, draw, draw_physics};
 
 use std::collections::HashSet;
-use std::path::Path;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::rect::Rect;
 use sdl2::pixels::Color;
-use sdl2::image::{LoadSurface};
 
-struct Renderable {
-  texture: sdl2::render::Texture,
-  source_rect: sdl2::rect::Rect,
-}
-
-impl Renderable {
-  fn new(renderer: &sdl2::render::Renderer, tex_path: &str) -> Renderable {
-    let p = Path::new(tex_path);
-    let surf = sdl2::surface::Surface::from_file(p).unwrap();
-    let texture = renderer.create_texture_from_surface(&surf).unwrap();
-    Renderable {
-      texture: texture,
-      source_rect: Rect::new(0, 0, surf.width(), surf.height()),
-    }
-  }
-
-  // Does sprite sheet shifting. Need to write a parameterized version w/ source_rect init as well
-  // fn update(&mut self, ticks: u32) {
-  //   self.source_rect.set_x((128 * ((ticks / 100) % 6) ) as i32);
-  // }
-}
-
-fn aabb_to_rect(a: &AABB) -> Rect {
-  Rect::new(
-    (a.center.x - a.halfSize.x) as i32,
-    (a.center.y - a.halfSize.y) as i32,
-    (a.halfSize.x * 2.) as u32,
-    (a.halfSize.y * 2.) as u32,
-  )
-}
 
 enum PlayerAction {
   MoveLeft,
@@ -58,7 +29,7 @@ fn player_resolve_actions(actions: &Vec<PlayerAction>, player: &mut MovingObject
       &PlayerAction::MoveLeft => player.speed.x -= 10.,
       &PlayerAction::MoveRight => player.speed.x += 10.,
       &PlayerAction::Jump => {
-        if player.onGround {
+        if player.on_ground {
           player.speed.y += 150.;
         }
       },
@@ -78,33 +49,6 @@ fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_act
   }
 }
 
-fn draw_physics(object: &MovingObject, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
-  let ground_color = Color::RGBA(0, 0, 255, 255);
-  let air_color = Color::RGBA(255, 0, 0,  255);
-  let draw_color = if object.onGround { ground_color } else { air_color };
-
-  let ref bb = object.bbox;
-  let bl = cam.object2screen(bb.bottom_left(), vec2::new(0., 0.));
-  let tr = cam.object2screen(bb.top_right(), vec2::new(0., 0.));
-  let modified_box = AABB {
-    center: cam.object2screen(object.bbox.center, Vec2::new(0., 0.)),
-    halfSize: vec2::new(tr.x - bl.x, bl.y - tr.y),
-  };
-  let draw_rect = aabb_to_rect(&modified_box);
-  renderer.set_draw_color(draw_color);
-  let _ = renderer.fill_rect(draw_rect);
-}
-
-fn draw(renderer: &mut sdl2::render::Renderer, rend: &Renderable, cam: &Camera) {
-  // let dest_rect = rend.source_rect;
-  // TODO this is obviously wrong. background needs to be scaled vertically to fit, without squishing X
-  let scaling = cam.screen_height / rend.source_rect.height() as f64;
-  let dest_rect = Rect::new(0, 0, (rend.source_rect.width() as f64 * scaling) as u32, cam.screen_height as u32);
-  renderer.copy(
-    &rend.texture, Some(rend.source_rect), Some(dest_rect))
-    .unwrap();
-}
-
 // World is a collection of systems. Remember not to let it pass itself anywhere, just relevant bits
 struct World {
   player_physics: MovingObject,
@@ -116,10 +60,10 @@ struct World {
 impl World {
   fn new(renderer: &mut sdl2::render::Renderer) -> World {
     let player = MovingObject {
-      pos: vec2::new(50., 50.),
-      speed: vec2::new(0., 0.),
-      bbox: AABB::new(vec2::new(50., 50.), vec2::new(1., 1.)),
-      onGround: true,
+      pos: Vec2::new(50., 50.),
+      speed: Vec2::new(0., 0.),
+      bbox: AABB::new(Vec2::new(50., 50.), Vec2::new(1., 1.)),
+      on_ground: true,
     };
     let background = Renderable::new(renderer, "assets/background.png");
     World {

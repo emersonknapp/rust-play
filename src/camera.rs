@@ -1,7 +1,4 @@
-extern crate nalgebra as na;
-
-pub type Mat3 = self::na::Matrix3<f64>;
-pub type Vec2 = self::na::Vector2<f64>;
+use common::{Vec2};
 
 pub struct Camera {
     pub fovy: f64,
