@@ -33,7 +33,7 @@ fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
         &PlayerAction::MoveRight => phys.speed.x += 10.,
         &PlayerAction::Jump => {
           if phys.on_ground {
-            phys.speed.y += 150.;
+            phys.speed.y += 100.;
           }
         },
       }
@@ -66,12 +66,11 @@ impl World {
     let level_size = Vec2::new(100., 25.);
 
     let player = Entity {
-      center: Vec2::new(50., 50.),
+      center: Vec2::new(5., 5.),
       rend: None,
       phys: Some(MovingObject {
-        pos: Vec2::new(50., 50.),
         speed: Vec2::new(0., 0.),
-        bbox: AABB::new(Vec2::new(50., 50.), Vec2::new(1., 1.)),
+        half_size: Vec2::new(1., 1.),
         on_ground: true,
       }),
     };
@@ -94,7 +93,7 @@ impl World {
       player: player,
       player_pending_actions: Vec::new(),
       camera: Camera {
-        fovy: 100.,
+        fovy: 25.,
         screen_height: 480.,
         pos: Vec2::new(0., 0.)
       }
@@ -112,7 +111,7 @@ impl World {
     player_resolve_actions(&mut self.player, &self.player_pending_actions);
     // step the physics simulation, (prev_phys_state, next_logic_state, time) -> next_phys_state
     if let Some(ref mut p) = self.player.phys {
-      p.update(dt_seconds);
+      self.player.center = p.update(self.player.center, dt_seconds);
     }
     // clean up
     self.player_pending_actions.clear();
@@ -121,8 +120,8 @@ impl World {
     if let Some(ref r) = self.background.rend {
       draw(renderer, r, &self.camera);
     }
-    if let Some(ref p) = self.player.phys {
-      draw_physics(p, renderer, &self.camera);
+    if let Some(_) = self.player.phys {
+      draw_physics(&self.player, renderer, &self.camera);
     }
   }
 }

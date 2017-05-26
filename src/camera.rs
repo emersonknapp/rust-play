@@ -7,9 +7,12 @@ pub struct Camera {
 }
 impl Camera {
     pub fn object2screen(&self, object_coord: Vec2, object_pos: Vec2) -> Vec2 {
+        self.world2screen(object2world(object_coord, object_pos))
+    }
+    pub fn world2screen(&self, world_coord: Vec2) -> Vec2 {
         camera2screen(
             world2camera(
-                object2world(object_coord, object_pos),
+                world_coord,
                 self.pos
             ),
             self.fovy,
