@@ -21,16 +21,18 @@ fn aabb_to_rect(a: &AABB) -> Rect {
 }
 
 pub struct Renderable {
+  aabb: AABB,
   texture: sdl2::render::Texture,
   source_rect: sdl2::rect::Rect,
 }
 
 impl Renderable {
-  pub fn new(renderer: &sdl2::render::Renderer, tex_path: &str) -> Renderable {
+  pub fn new(renderer: &sdl2::render::Renderer, tex_path: &str, aabb: AABB) -> Renderable {
     let p = Path::new(tex_path);
     let surf = sdl2::surface::Surface::from_file(p).unwrap();
     let texture = renderer.create_texture_from_surface(&surf).unwrap();
     Renderable {
+      aabb: aabb,
       texture: texture,
       source_rect: Rect::new(0, 0, surf.width(), surf.height()),
     }
