@@ -7,20 +7,17 @@ pub struct AABB {
   pub half_size: Vec2,
 }
 impl AABB {
-    pub fn bottom_left(&self) -> Vec2 {
-        self.center - self.half_size
-    }
-    pub fn top_right(&self) -> Vec2 {
-        self.center + self.half_size
-    }
-}
-
-impl AABB {
   pub fn new(center: Vec2, half_size: Vec2) -> AABB {
     AABB {
       center: center,
       half_size: half_size,
     }
+  }
+  pub fn bottom_left(&self) -> Vec2 {
+      self.center - self.half_size
+  }
+  pub fn top_right(&self) -> Vec2 {
+      self.center + self.half_size
   }
   pub fn intersects(&self, other: &AABB) -> bool {
     ! (

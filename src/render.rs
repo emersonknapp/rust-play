@@ -3,7 +3,7 @@ extern crate sdl2;
 use camera::Camera;
 use common::{Vec2, AABB};
 use entity::Entity;
-use physics::MovingObject;
+use tilemap::Tilemap;
 
 use std::path::Path;
 
@@ -11,15 +11,6 @@ use sdl2::image::{LoadSurface};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 
-
-fn aabb_to_rect(a: &AABB) -> Rect {
-  Rect::new(
-    (a.center.x - a.half_size.x) as i32,
-    (a.center.y - a.half_size.y) as i32,
-    (a.half_size.x * 2.) as u32,
-    (a.half_size.y * 2.) as u32,
-  )
-}
 
 pub struct Renderable {
   aabb: AABB,
@@ -45,25 +36,17 @@ impl Renderable {
   // }
 }
 
-pub fn draw(renderer: &mut sdl2::render::Renderer, rend: &Renderable, cam: &Camera) {
-  // let scaling = cam.screen_height / rend.source_rect.height() as f64;
-  // let dest_rect = Rect::new(0, 0, (rend.source_rect.width() as f64 * scaling) as u32, cam.screen_height as u32);
+pub fn draw(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
+  if let Some(ref rend) = e.rend {
+    let bl = e.center + rend.aabb.center - rend.aabb.half_size;
+    let draw_rect = cam.to_draw_rect(bl, rend.aabb.half_size * 2.);
 
-  let camera_scaling = cam.screen_height / cam.fovy;
-  let dest_size = rend.aabb.half_size * camera_scaling * 2.;
-  let dest_bottom_left = rend.aabb.center - cam.pos - rend.aabb.half_size;
-  let dest_rect = Rect::new(
-    dest_bottom_left.x as i32,
-    dest_bottom_left.y as i32,
-    dest_size.x as u32,
-    dest_size.y as u32,
-  );
-
-  renderer.copy(
-    &rend.texture,
-    Some(rend.source_rect),
-    Some(dest_rect)
-  ).unwrap();
+    renderer.copy(
+      &rend.texture,
+      Some(rend.source_rect),
+      Some(draw_rect)
+    ).unwrap();
+  }
 }
 
 pub fn draw_physics(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
@@ -73,20 +56,24 @@ pub fn draw_physics(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Cam
   if let Some(ref phys) = e.phys {
     let draw_color = if phys.on_ground { ground_color } else { air_color };
 
-    let world_center = e.center;
-    let world_bl = world_center - phys.half_size;
-    let world_tr = world_center + phys.half_size;
-
-    let bl = cam.world2screen(world_bl);
-    let tr = cam.world2screen(world_tr);
-    let draw_rect = Rect::new(
-      bl.x as i32,
-      tr.y as i32,
-      (tr.x - bl.x) as u32,
-      (bl.y - tr.y) as u32,
-    );
+    let bl = e.center - phys.half_size;
+    let draw_rect = cam.to_draw_rect(bl, phys.half_size * 2.);
 
     renderer.set_draw_color(draw_color);
     let _ = renderer.fill_rect(draw_rect);
+  }
+}
+
+pub fn draw_tilemap_collisions(tm: &Tilemap, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
+  let ref c = tm.collisions;
+  for x in 0..c.nrows() {
+    for y in 0..c.ncols() {
+      let bl = Vec2::new(x as f64 * 2., y as f64 * 2.);
+      let tile_size = Vec2::new(tm.tile_size, tm.tile_size);
+      let draw_rect = cam.to_draw_rect(bl, tile_size);
+
+      renderer.set_draw_color(Color::RGBA(0, 0, 0, 255));
+      let _ = renderer.draw_rect(draw_rect);
+    }
   }
 }

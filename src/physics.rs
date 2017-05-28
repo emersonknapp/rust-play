@@ -1,6 +1,4 @@
-extern crate nalgebra as na;
-
-use common::{Vec2, AABB};
+use common::{Vec2};
 
 // px/sec^2
 const GRAVITY: f64 = 600.;
@@ -31,9 +29,10 @@ impl MovingObject {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use common::AABB;
   #[test]
   fn ctor() {
-    let a = AABB::new(Vec2::new(0., 0.), Vec2::new(1., 1.));
+    let _ = AABB::new(Vec2::new(0., 0.), Vec2::new(1., 1.));
   }
   #[test]
   fn intersections() {

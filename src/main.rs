@@ -4,6 +4,7 @@ mod camera;
 mod common;
 mod entity;
 mod render;
+mod tilemap;
 
 use std::collections::HashSet;
 
@@ -14,14 +15,22 @@ use sdl2::pixels::Color;
 use common::{Vec2, AABB};
 use physics::{MovingObject};
 use camera::{Camera};
-use render::{Renderable, draw, draw_physics};
+use render::{Renderable, draw, draw_physics, draw_tilemap_collisions};
 use entity::Entity;
+use tilemap::Tilemap;
 
 
 enum PlayerAction {
   MoveLeft,
   MoveRight,
   Jump,
+}
+
+enum CameraAction {
+  MoveLeft,
+  MoveRight,
+  MoveUp,
+  MoveDown,
 }
 
 fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
@@ -53,11 +62,38 @@ fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_act
   }
 }
 
+fn camera_resolve_actions(camera: &mut Camera, actions: &Vec<CameraAction>) {
+  for a in actions {
+    match a {
+      &CameraAction::MoveLeft => camera.pos.x -= 2.,
+      &CameraAction::MoveRight => camera.pos.x += 2.,
+      &CameraAction::MoveUp => camera.pos.y -= 2.,
+      &CameraAction::MoveDown => camera.pos.y += 2.,
+    }
+  }
+}
+fn input_camera(_: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_action: &mut FnMut(CameraAction)) {
+  if pressed.contains(&Keycode::W) {
+    do_action(CameraAction::MoveUp);
+  }
+  if pressed.contains(&Keycode::A) {
+    do_action(CameraAction::MoveLeft);
+  }
+  if pressed.contains(&Keycode::S) {
+    do_action(CameraAction::MoveDown);
+  }
+  if pressed.contains(&Keycode::D) {
+    do_action(CameraAction::MoveRight);
+  }
+}
+
 // World is a collection of systems. Remember not to let it pass itself anywhere, just relevant bits
 struct World {
   player: Entity,
   background: Entity,
+  tilemap: Tilemap,
   player_pending_actions: Vec<PlayerAction>,
+  camera_pending_actions: Vec<CameraAction>,
   camera: Camera,
 }
 
@@ -66,7 +102,7 @@ impl World {
     let level_size = Vec2::new(100., 25.);
 
     let player = Entity {
-      center: Vec2::new(5., 5.),
+      center: Vec2::new(2., 10.),
       rend: None,
       phys: Some(MovingObject {
         speed: Vec2::new(0., 0.),
@@ -86,25 +122,35 @@ impl World {
         }
       )),
       phys: None,
-    }
-    ;
+    };
+
+    let tiles = Tilemap::new(10, 10, 2.);
+
     World {
       background: background,
       player: player,
       player_pending_actions: Vec::new(),
+      camera_pending_actions: Vec::new(),
       camera: Camera {
         fovy: 25.,
         screen_height: 480.,
         pos: Vec2::new(0., 0.)
-      }
+      },
+      tilemap: tiles
     }
   }
   fn input(&mut self, keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>) {
-    let mut do_action = |a: PlayerAction| {
-      self.player_pending_actions.push(a);
-    };
+    {
+      let mut do_action = |a: PlayerAction| {
+        self.player_pending_actions.push(a);
+      };
     // parse input, (inputs, ?prev_logic_state?) -> actions
     input_player(&keys_down, &pressed, &mut do_action);
+}
+    let mut do_cam_action = |a: CameraAction| {
+      self.camera_pending_actions.push(a);
+    };
+    input_camera(&keys_down, &pressed, &mut do_cam_action);
   }
   fn update(&mut self, _: f64, dt_seconds: f64) {
     // dispatch actions through reducer, (prev_logic_state, actions) -> next_logic_state
@@ -115,13 +161,19 @@ impl World {
     }
     // clean up
     self.player_pending_actions.clear();
+
+    camera_resolve_actions(&mut self.camera, &self.camera_pending_actions);
+    self.camera_pending_actions.clear();
   }
   fn draw(&mut self, renderer: &mut sdl2::render::Renderer) {
-    if let Some(ref r) = self.background.rend {
-      draw(renderer, r, &self.camera);
+    if let Some(_) = self.background.rend {
+      draw(&self.background, renderer, &self.camera);
     }
     if let Some(_) = self.player.phys {
       draw_physics(&self.player, renderer, &self.camera);
+    }
+    if true {
+      draw_tilemap_collisions(&self.tilemap, renderer, &self.camera);
     }
   }
 }
