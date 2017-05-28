@@ -7,6 +7,7 @@ mod render;
 mod tilemap;
 
 use std::collections::HashSet;
+use std::path::Path;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -99,7 +100,9 @@ struct World {
 
 impl World {
   fn new(renderer: &mut sdl2::render::Renderer, screen_size: Vec2) -> World {
-    let level_size = Vec2::new(100., 25.);
+    let tiles = Tilemap::from_file(Path::new("assets/level1.lv")).unwrap();
+    let level_size = Vec2::new(tiles.width as f64, tiles.height as f64);
+
 
     let player = Entity {
       center: Vec2::new(2., 10.),
@@ -117,14 +120,12 @@ impl World {
         renderer,
         "assets/background.png",
         AABB {
-          center: level_size / 2.,
-          half_size: level_size / 2.,
+          center: level_size * tiles.tile_size / 2.,
+          half_size: level_size * tiles.tile_size / 2.,
         }
       )),
       phys: None,
     };
-
-    let tiles = Tilemap::new(4, 4, 2.);
 
     World {
       background: background,
@@ -132,7 +133,7 @@ impl World {
       player_pending_actions: Vec::new(),
       camera_pending_actions: Vec::new(),
       camera: Camera {
-        fovy: 25.,
+        fovy: level_size.y * tiles.tile_size,
         screen_height: screen_size.y,
         pos: Vec2::new(0., 0.)
       },
@@ -169,11 +170,11 @@ impl World {
     if let Some(_) = self.background.rend {
       draw(&self.background, renderer, &self.camera);
     }
-    if let Some(_) = self.player.phys {
-      draw_physics(&self.player, renderer, &self.camera);
-    }
     if true {
       draw_tilemap_collisions(&self.tilemap, renderer, &self.camera);
+    }
+    if let Some(_) = self.player.phys {
+      draw_physics(&self.player, renderer, &self.camera);
     }
   }
 }
@@ -190,6 +191,7 @@ fn main() {
     .unwrap();
   let mut renderer = window.renderer()
     .accelerated().build().unwrap();
+  renderer.set_blend_mode(sdl2::render::BlendMode::Blend);
 
   let mut timer = sdl_context.timer().unwrap();
   let mut event_pump = sdl_context.event_pump().unwrap();
