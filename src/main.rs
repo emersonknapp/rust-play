@@ -98,7 +98,7 @@ struct World {
 }
 
 impl World {
-  fn new(renderer: &mut sdl2::render::Renderer) -> World {
+  fn new(renderer: &mut sdl2::render::Renderer, screen_size: Vec2) -> World {
     let level_size = Vec2::new(100., 25.);
 
     let player = Entity {
@@ -124,7 +124,7 @@ impl World {
       phys: None,
     };
 
-    let tiles = Tilemap::new(10, 10, 2.);
+    let tiles = Tilemap::new(4, 4, 2.);
 
     World {
       background: background,
@@ -133,7 +133,7 @@ impl World {
       camera_pending_actions: Vec::new(),
       camera: Camera {
         fovy: 25.,
-        screen_height: 480.,
+        screen_height: screen_size.y,
         pos: Vec2::new(0., 0.)
       },
       tilemap: tiles
@@ -144,9 +144,9 @@ impl World {
       let mut do_action = |a: PlayerAction| {
         self.player_pending_actions.push(a);
       };
-    // parse input, (inputs, ?prev_logic_state?) -> actions
-    input_player(&keys_down, &pressed, &mut do_action);
-}
+      // parse input, (inputs, ?prev_logic_state?) -> actions
+      input_player(&keys_down, &pressed, &mut do_action);
+    }
     let mut do_cam_action = |a: CameraAction| {
       self.camera_pending_actions.push(a);
     };
@@ -199,7 +199,7 @@ fn main() {
   let mut ticks_leftover = 0;
 
   // game init
-  let mut world = World::new(&mut renderer);
+  let mut world = World::new(&mut renderer, Vec2::new(640., 480.));
   let sim_dt = 10;
   let sim_dt_seconds = sim_dt as f64 / 1000.;
 

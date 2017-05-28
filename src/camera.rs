@@ -1,4 +1,6 @@
 use common::{Vec2};
+
+use std::f64;
 use sdl2::rect::Rect;
 
 pub struct Camera {
@@ -10,11 +12,13 @@ impl Camera {
   pub fn to_draw_rect(&self, bl: Vec2, size: Vec2) -> Rect {
     let bl = bl - self.pos;
     let u2s = self.screen_height as f64 / self.fovy;
+
+    // round coordinates down so they don't spread, but round size up to overlap/pad adjacent tiles
     Rect::new(
-      (bl.x * u2s) as i32,
-      (self.screen_height - ((bl.y + size.y) * u2s)) as i32,
-      (size.x * u2s) as u32,
-      (size.y * u2s) as u32,
+      (bl.x * u2s).floor() as i32,
+      (self.screen_height - ((bl.y + size.y) * u2s)).floor() as i32,
+      (size.x * u2s).ceil() as u32,
+      (size.y * u2s).ceil() as u32,
     )
 
   }

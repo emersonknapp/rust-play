@@ -66,12 +66,11 @@ pub fn draw_physics(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Cam
 
 pub fn draw_tilemap_collisions(tm: &Tilemap, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
   let ref c = tm.collisions;
-  for x in 0..c.nrows() {
-    for y in 0..c.ncols() {
+  for y in 0..c.nrows() {
+    for x in 0..c.ncols() {
       let bl = Vec2::new(x as f64 * 2., y as f64 * 2.);
       let tile_size = Vec2::new(tm.tile_size, tm.tile_size);
       let draw_rect = cam.to_draw_rect(bl, tile_size);
-
       renderer.set_draw_color(Color::RGBA(0, 0, 0, 255));
       let _ = renderer.draw_rect(draw_rect);
     }
