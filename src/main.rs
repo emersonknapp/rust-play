@@ -37,11 +37,10 @@ enum CameraAction {
 
 fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
   if let Some(ref mut phys) = player.phys {
-    phys.speed.x = 0.;
     for a in actions {
       match a {
-        &PlayerAction::MoveLeft => phys.speed.x -= 2.,
-        &PlayerAction::MoveRight => phys.speed.x += 2.,
+        &PlayerAction::MoveLeft => phys.speed.x -= 16.,
+        &PlayerAction::MoveRight => phys.speed.x += 16.,
         &PlayerAction::Jump => {
           if phys.on_ground {
             phys.speed.y += 100.;
@@ -52,14 +51,14 @@ fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
   }
 }
 
-fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
+fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
   if pressed.contains(&Keycode::Space) {
     do_action(PlayerAction::Jump);
   }
-  if keys_down.contains(&Keycode::Left) {
+  if pressed.contains(&Keycode::Left) || released.contains(&Keycode::Right) {
     do_action(PlayerAction::MoveLeft);
   }
-  if keys_down.contains(&Keycode::Right) {
+  if pressed.contains(&Keycode::Right) || released.contains(&Keycode::Left) {
     do_action(PlayerAction::MoveRight);
   }
 }
@@ -141,13 +140,13 @@ impl World {
       tilemap: tiles
     }
   }
-  fn input(&mut self, keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>) {
+  fn input(&mut self, keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>) {
     {
       let mut do_action = |a: PlayerAction| {
         self.player_pending_actions.push(a);
       };
       // parse input, (inputs, ?prev_logic_state?) -> actions
-      input_player(&keys_down, &pressed, &mut do_action);
+      input_player(&keys_down, &pressed, &released, &mut do_action);
     }
     let mut do_cam_action = |a: CameraAction| {
       self.camera_pending_actions.push(a);
@@ -161,10 +160,10 @@ impl World {
     if let Some(ref mut p) = self.player.phys {
       self.player.center = p.update(self.player.center, dt_seconds);
     }
+    camera_resolve_actions(&mut self.camera, &self.camera_pending_actions);
+
     // clean up
     self.player_pending_actions.clear();
-
-    camera_resolve_actions(&mut self.camera, &self.camera_pending_actions);
     self.camera_pending_actions.clear();
   }
   fn draw(&mut self, renderer: &mut sdl2::render::Renderer) {
@@ -237,14 +236,14 @@ fn main() {
     if keys.contains(&Keycode::Escape) {
       break 'running;
     }
-    // let released = &prev_keys - &keys;
+    let released = &prev_keys - &keys;
 
     // prepare for drawing
     renderer.set_draw_color(Color::RGBA(0,0,0,255));
     renderer.clear();
 
     // invoke game logic
-    world.input(&keys, &pressed);
+    world.input(&keys, &pressed, &released);
     while dt_accum >= sim_dt {
       phys_counter += 1;
       world.update(0., sim_dt_secs);
@@ -261,6 +260,7 @@ fn main() {
     frame_counter_accumulator += dt;
     if frame_counter_accumulator.as_secs() > 1 {
       println!("{} {}", frame_counter, phys_counter);
+      println!("pl {:?} {}", world.player.center.x, world.player.center.y);
       frame_counter_accumulator -= time::Duration::from_secs(1);
       frame_counter = 0;
       phys_counter = 0;
