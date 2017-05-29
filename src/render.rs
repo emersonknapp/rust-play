@@ -68,12 +68,16 @@ pub fn draw_tilemap_collisions(tm: &Tilemap, renderer: &mut sdl2::render::Render
   let ref c = tm.collisions;
   let odd_color = Color::RGBA(255, 255, 0, 80);
   let even_color = Color::RGBA(0, 255, 255, 80);
-  let mut draw_color;
   for y in 0..c.nrows() {
     for x in 0..c.ncols() {
-      if (x + y) % 2 == 0 {
+      let draw_color;
+      if c[(y, x)] {
+        draw_color = Color::RGBA(255, 0, 255, 120);
+      }
+      else if (x + y) % 2 == 0 {
         draw_color = even_color;
-      } else {
+      }
+      else {
         draw_color = odd_color;
       }
       let bl = Vec2::new(x as f64 * tm.tile_size, y as f64 * tm.tile_size);
