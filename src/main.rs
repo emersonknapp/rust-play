@@ -8,6 +8,7 @@ mod tilemap;
 
 use std::collections::HashSet;
 use std::path::Path;
+use std::{time, thread};
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -39,8 +40,8 @@ fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
     phys.speed.x = 0.;
     for a in actions {
       match a {
-        &PlayerAction::MoveLeft => phys.speed.x -= 10.,
-        &PlayerAction::MoveRight => phys.speed.x += 10.,
+        &PlayerAction::MoveLeft => phys.speed.x -= 2.,
+        &PlayerAction::MoveRight => phys.speed.x += 2.,
         &PlayerAction::Jump => {
           if phys.on_ground {
             phys.speed.y += 100.;
@@ -179,6 +180,9 @@ impl World {
   }
 }
 
+fn to_millis(dt: &time::Duration) -> f64 {
+  dt.as_secs() as f64 * 1000. + (dt.subsec_nanos() as f64 / 1000000.)
+}
 
 fn main() {
   // sdl setup
@@ -193,24 +197,30 @@ fn main() {
     .accelerated().build().unwrap();
   renderer.set_blend_mode(sdl2::render::BlendMode::Blend);
 
-  let mut timer = sdl_context.timer().unwrap();
   let mut event_pump = sdl_context.event_pump().unwrap();
 
   let mut prev_keys = HashSet::new();
-  let mut last_ticks = timer.ticks();
-  let mut ticks_leftover = 0;
 
   // game init
   let mut world = World::new(&mut renderer, Vec2::new(640., 480.));
-  let sim_dt = 10;
-  let sim_dt_seconds = sim_dt as f64 / 1000.;
 
+  let sim_dt = time::Duration::from_millis(10);
+  let sim_dt_secs = sim_dt.as_secs() as f64 + (sim_dt.subsec_nanos() as f64 / 1000000000.);
+  let target_frame_time = time::Duration::from_millis(16);
+  let mut last_time = time::Instant::now();
+  let mut dt_accum = time::Duration::new(0, 0);
+
+  // debug stuff
+  let mut frame_counter = 0;
+  let mut phys_counter = 0;
+  let mut frame_counter_accumulator = time::Duration::new(0, 0);
+
+  thread::sleep(target_frame_time);
   'running: loop {
-    let ticks = timer.ticks();
-    let time = ticks as f64 / 1000.;
-    let dt = ticks - last_ticks;
-    last_ticks = ticks;
-    ticks_leftover += dt;
+    let dt = last_time.elapsed();
+    last_time = time::Instant::now();
+    assert!(dt >= target_frame_time);
+    dt_accum += dt;
 
     // input
     for event in event_pump.poll_iter() {
@@ -235,14 +245,30 @@ fn main() {
 
     // invoke game logic
     world.input(&keys, &pressed);
-    while ticks_leftover >= sim_dt {
-      world.update(time, sim_dt_seconds);
-      ticks_leftover -= sim_dt
+    while dt_accum >= sim_dt {
+      phys_counter += 1;
+      world.update(0., sim_dt_secs);
+      dt_accum -= sim_dt;
     }
     world.draw(&mut renderer);
 
     // loop finalizing
     renderer.present();
     prev_keys = keys;
+
+    // Debug output
+    frame_counter += 1;
+    frame_counter_accumulator += dt;
+    if frame_counter_accumulator.as_secs() > 1 {
+      println!("{} {}", frame_counter, phys_counter);
+      frame_counter_accumulator -= time::Duration::from_secs(1);
+      frame_counter = 0;
+      phys_counter = 0;
+    }
+
+    // Sleep until next frame
+    if let Some(sleep_duration) = target_frame_time.checked_sub(last_time.elapsed()) {
+      thread::sleep(sleep_duration);
+    }
   }
 }
