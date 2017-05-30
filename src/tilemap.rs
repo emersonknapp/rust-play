@@ -5,6 +5,7 @@ use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
 
+use common::{Vec2, Vec2u, AABB};
 
 // TODO: sparse tilemap representation for large maps
 // OR: tilemap chunking
@@ -83,4 +84,35 @@ impl Tilemap {
 
     Ok(tiles)
   }
+
+  fn rightmost(&self) -> f64 {
+    self.tile_size * (self.width + 1) as f64
+  }
+
+  fn topmost(&self) -> f64 {
+    self.tile_size * (self.height + 1) as f64
+  }
+
+  fn tile_for(&self, local_coord: Vec2) -> (i32, i32) {
+    (
+      (local_coord.x / self.tile_size).floor() as i32,
+      (local_coord.y / self.tile_size).floor() as i32,
+    )
+  }
+
+  pub fn intersects_box(&self, aabb: &AABB) -> Vec<Vec2u> {
+    let mut isects = Vec::new();
+    let bl = self.tile_for(aabb.bottom_left());
+    let tr = self.tile_for(aabb.top_right());
+    for x in bl.0..(tr.0+1) {
+      for y in bl.1..(tr.1+1) {
+        if x >= 0 && x < self.width as i32 && y >= 0 && y < self.height as i32 {
+          isects.push(Vec2u::new(x as usize, y as usize));
+        }
+      }
+    }
+    isects
+  }
+
+
 }

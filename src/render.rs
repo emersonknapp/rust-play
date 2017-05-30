@@ -1,7 +1,7 @@
 extern crate sdl2;
 
 use camera::Camera;
-use common::{Vec2, AABB};
+use common::{Vec2, Vec2u, AABB};
 use entity::Entity;
 use tilemap::Tilemap;
 
@@ -64,10 +64,11 @@ pub fn draw_physics(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Cam
   }
 }
 
-pub fn draw_tilemap_collisions(tm: &Tilemap, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
+pub fn draw_tilemap_collisions(tm: &Tilemap, intersected: &Vec<Vec2u>, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
   let ref c = tm.collisions;
   let odd_color = Color::RGBA(255, 255, 0, 80);
   let even_color = Color::RGBA(0, 255, 255, 80);
+  // Draw tilemap collision layer
   for y in 0..c.nrows() {
     for x in 0..c.ncols() {
       let draw_color;
@@ -86,5 +87,14 @@ pub fn draw_tilemap_collisions(tm: &Tilemap, renderer: &mut sdl2::render::Render
       renderer.set_draw_color(draw_color);
       let _ = renderer.fill_rect(draw_rect);
     }
+  }
+  // Debug draw collisions with the tilemap
+  for i in intersected {
+    let draw_color = Color::RGBA(0, 255, 0, 200);
+    let bl = Vec2::new(i.x as f64 * tm.tile_size, i.y as f64 * tm.tile_size);
+    let tile_size = Vec2::new(tm.tile_size, tm.tile_size);
+    let draw_rect = cam.to_draw_rect(bl, tile_size);
+    renderer.set_draw_color(draw_color);
+    let _ = renderer.fill_rect(draw_rect);
   }
 }

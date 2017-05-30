@@ -14,12 +14,12 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
-use common::{Vec2, AABB};
+use common::{Vec2, Vec2u, AABB};
 use physics::{MovingObject};
 use camera::{Camera};
 use render::{Renderable, draw, draw_physics, draw_tilemap_collisions};
 use entity::Entity;
-use tilemap::Tilemap;
+use tilemap::{Tilemap};
 
 
 enum PlayerAction {
@@ -95,6 +95,7 @@ struct World {
   tilemap: Tilemap,
   player_pending_actions: Vec<PlayerAction>,
   camera_pending_actions: Vec<CameraAction>,
+  tilemap_intersectons: Vec<Vec2u>,
   camera: Camera,
 }
 
@@ -137,7 +138,8 @@ impl World {
         screen_height: screen_size.y,
         pos: Vec2::new(0., 0.)
       },
-      tilemap: tiles
+      tilemap: tiles,
+      tilemap_intersectons: Vec::new(),
     }
   }
   fn input(&mut self, keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>) {
@@ -161,6 +163,11 @@ impl World {
       self.player.center = p.update(self.player.center, dt_seconds);
     }
     camera_resolve_actions(&mut self.camera, &self.camera_pending_actions);
+    //self.camera.pos = self.player.center;
+
+    if let Some(ref p) = self.player.phys {
+      self.tilemap_intersectons = self.tilemap.intersects_box(&p.aabb.offset(self.player.center));
+    }
 
     // clean up
     self.player_pending_actions.clear();
@@ -171,7 +178,7 @@ impl World {
       draw(&self.background, renderer, &self.camera);
     }
     if true {
-      draw_tilemap_collisions(&self.tilemap, renderer, &self.camera);
+      draw_tilemap_collisions(&self.tilemap, &self.tilemap_intersectons, renderer, &self.camera);
     }
     if let Some(_) = self.player.phys {
       draw_physics(&self.player, renderer, &self.camera);
