@@ -1,11 +1,11 @@
-use common::{Vec2};
+use common::{Vec2, AABB};
 
 // px/sec^2
 const GRAVITY: f64 = 600.;
 
 pub struct MovingObject {
   pub speed: Vec2,
-  pub half_size: Vec2,
+  pub aabb: AABB,
   pub on_ground: bool,
 }
 
@@ -16,8 +16,8 @@ impl MovingObject {
 
     self.speed.y -= GRAVITY * dt_seconds;
 
-    if next.y <= self.half_size.y {
-      next.y = self.half_size.y;
+    if next.y <= self.aabb.half_size.y {
+      next.y = self.aabb.half_size.y;
       self.speed.y = 0.;
       self.on_ground = true;
     } else {

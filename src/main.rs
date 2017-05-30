@@ -51,7 +51,7 @@ fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
   }
 }
 
-fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
+fn input_player(_: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
   if pressed.contains(&Keycode::Space) {
     do_action(PlayerAction::Jump);
   }
@@ -109,7 +109,7 @@ impl World {
       rend: None,
       phys: Some(MovingObject {
         speed: Vec2::new(0., 0.),
-        half_size: Vec2::new(1., 1.),
+        aabb: AABB::new(Vec2::new(0., 0.), Vec2::new(1., 1.)),
         on_ground: true,
       }),
     };
@@ -179,9 +179,9 @@ impl World {
   }
 }
 
-fn to_millis(dt: &time::Duration) -> f64 {
-  dt.as_secs() as f64 * 1000. + (dt.subsec_nanos() as f64 / 1000000.)
-}
+// fn to_millis(dt: &time::Duration) -> f64 {
+//   dt.as_secs() as f64 * 1000. + (dt.subsec_nanos() as f64 / 1000000.)
+// }
 
 fn main() {
   // sdl setup

@@ -56,8 +56,8 @@ pub fn draw_physics(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Cam
   if let Some(ref phys) = e.phys {
     let draw_color = if phys.on_ground { ground_color } else { air_color };
 
-    let bl = e.center - phys.half_size;
-    let draw_rect = cam.to_draw_rect(bl, phys.half_size * 2.);
+    let bl = phys.aabb.bottom_left() + e.center;
+    let draw_rect = cam.to_draw_rect(bl, phys.aabb.half_size * 2.);
 
     renderer.set_draw_color(draw_color);
     let _ = renderer.fill_rect(draw_rect);
