@@ -33,6 +33,8 @@ enum CameraAction {
   MoveRight,
   MoveUp,
   MoveDown,
+  ZoomOut,
+  ZoomIn,
 }
 
 fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
@@ -72,6 +74,8 @@ fn camera_resolve_actions(camera: &mut Camera, actions: &Vec<CameraAction>) {
       &CameraAction::MoveRight => camera.pos.x += 2.,
       &CameraAction::MoveUp => camera.pos.y -= 2.,
       &CameraAction::MoveDown => camera.pos.y += 2.,
+      &CameraAction::ZoomOut => camera.fovy *= 1.25,
+      &CameraAction::ZoomIn => camera.fovy *= 0.8,
     }
   }
 }
@@ -87,6 +91,12 @@ fn input_camera(_: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_action: &mu
   }
   if pressed.contains(&Keycode::D) {
     do_action(CameraAction::MoveRight);
+  }
+  if pressed.contains(&Keycode::Q) {
+    do_action(CameraAction::ZoomOut);
+  }
+  if pressed.contains(&Keycode::E) {
+    do_action(CameraAction::ZoomIn);
   }
 }
 
