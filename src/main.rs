@@ -90,6 +90,10 @@ fn input_camera(_: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_action: &mu
   }
 }
 
+fn update_camera(dt_seconds: f64, cam: &mut Camera, following: &Entity) {
+  cam.pos.x = following.center.x;
+}
+
 // World is a collection of systems. Remember not to let it pass itself anywhere, just relevant bits
 struct World {
   player: Entity,
@@ -138,7 +142,8 @@ impl World {
       camera: Camera {
         fovy: level_size.y * tiles.tile_size,
         screen_height: screen_size.y,
-        pos: Vec2::new(0., 0.)
+        ratio: screen_size.x / screen_size.y,
+        pos: Vec2::new(0., tiles.height as f64/ 2. * tiles.tile_size)
       },
       tilemap: tiles,
       tilemap_intersectons: Vec::new(),
@@ -189,6 +194,7 @@ impl World {
       }
       self.player.center = test_center;
     }
+    update_camera(dt_seconds, &mut self.camera, &self.player);
   }
   fn draw(&mut self, renderer: &mut sdl2::render::Renderer) {
     if let Some(_) = self.background.rend {

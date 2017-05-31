@@ -5,12 +5,15 @@ use sdl2::rect::Rect;
 
 pub struct Camera {
     pub fovy: f64,
+    pub ratio: f64, // fovy * ratio = fovx
     pub screen_height: f64,
     pub pos: Vec2,
 }
 impl Camera {
   pub fn to_draw_rect(&self, bl: Vec2, size: Vec2) -> Rect {
-    let bl = bl - self.pos;
+    let fovx = self.ratio * self.fovy;
+    let bl = bl - self.pos + Vec2::new(fovx / 2., self.fovy / 2.);
+
     let u2s = self.screen_height as f64 / self.fovy;
 
     // round coordinates down so they don't spread, but round size up to overlap/pad adjacent tiles
