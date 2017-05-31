@@ -93,7 +93,7 @@ impl Tilemap {
     self.tile_size * (self.height + 1) as f64
   }
 
-  fn tile_for(&self, local_coord: Vec2) -> (i32, i32) {
+  pub fn tile_for(&self, local_coord: Vec2) -> (i32, i32) {
     (
       (local_coord.x / self.tile_size).floor() as i32,
       (local_coord.y / self.tile_size).floor() as i32,

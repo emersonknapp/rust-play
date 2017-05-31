@@ -10,6 +10,7 @@ use std::path::Path;
 use sdl2::image::{LoadSurface};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
+use sdl2::render::Renderer;
 
 
 pub struct Renderable {
@@ -91,4 +92,13 @@ pub fn draw_tilemap_collisions(tm: &Tilemap, intersected: &Vec<Vec2u>, renderer:
     renderer.set_draw_color(draw_color);
     let _ = renderer.fill_rect(draw_rect);
   }
+}
+
+pub fn draw_tile(renderer: &mut Renderer, camera: &Camera, coord: (i32, i32), tile_size: f64) {
+  let draw_color = Color::RGBA(0, 255, 255, 255);
+  let bl = Vec2::new(coord.0 as f64 * tile_size, coord.1 as f64 * tile_size);
+  let tsvec = Vec2::new(tile_size, tile_size);
+  let draw_rect = camera.to_draw_rect(bl, tsvec);
+  renderer.set_draw_color(draw_color);
+  let _ = renderer.fill_rect(draw_rect);
 }

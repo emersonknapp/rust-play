@@ -73,6 +73,7 @@ fn main() {
       break 'running;
     }
     let released = &prev_keys - &keys;
+    let mouse = event_pump.mouse_state();
 
     // prepare for drawing
     renderer.set_draw_color(Color::RGBA(0,0,0,255));
@@ -80,7 +81,7 @@ fn main() {
 
     { // here is where modes differ. what is input, upadted, and drawn
       // invoke game logic
-      world.input(&keys, &pressed, &released);
+      world.input(&keys, &pressed, &released, &mouse);
       while dt_accum >= sim_dt {
         phys_counter += 1;
         world.update(0., sim_dt_secs);
@@ -97,8 +98,11 @@ fn main() {
     frame_counter += 1;
     frame_counter_accumulator += dt;
     if frame_counter_accumulator.as_secs() > 1 {
-      println!("{} {}", frame_counter, phys_counter);
+      println!("cycles {} {}", frame_counter, phys_counter);
+      println!("mouse {} {}", mouse.x(), mouse.y());
       world.print_stats();
+      println!();
+
       frame_counter_accumulator -= time::Duration::from_secs(1);
       frame_counter = 0;
       phys_counter = 0;

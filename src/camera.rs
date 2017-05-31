@@ -12,18 +12,37 @@ pub struct Camera {
 impl Camera {
   pub fn to_draw_rect(&self, bl: Vec2, size: Vec2) -> Rect {
     let fovx = self.ratio * self.fovy;
-    let bl = bl - self.pos + Vec2::new(fovx / 2., self.fovy / 2.);
-
     let u2s = self.screen_height as f64 / self.fovy;
+    let half_size = Vec2::new(fovx / 2., self.fovy / 2.);
 
-    // round coordinates down so they don't spread, but round size up to overlap/pad adjacent tiles
+    let camera_bl = bl - self.pos + half_size;
+    let camera_y = camera_bl.y + size.y;
+    let screen_y = self.screen_height - (camera_y * u2s);
+
+    let screen_x = camera_bl.x * u2s;
+
+    // round coordinates down so they don't have gaps between,
+    // and round size up to err towards overlap adjacent tiles
     Rect::new(
-      (bl.x * u2s).floor() as i32,
-      (self.screen_height - ((bl.y + size.y) * u2s)).floor() as i32,
+      screen_x.floor() as i32,
+      screen_y.floor() as i32,
       (size.x * u2s).ceil() as u32,
       (size.y * u2s).ceil() as u32,
     )
+  }
 
+  pub fn screen2world(&self, x: i32, y: i32) -> Vec2 {
+    let fovx = self.ratio * self.fovy;
+    let u2s = self.screen_height as f64 / self.fovy;
+    let half_size = Vec2::new(fovx / 2., self.fovy / 2.);
+
+    let camera_x = x as f64 / u2s;
+    let world_x = camera_x - half_size.x + self.pos.x;
+
+    let camera_y = (self.screen_height as f64 - y as f64) / u2s;
+    let world_y = camera_y - half_size.y + self.pos.y;
+
+    Vec2::new(world_x, world_y)
   }
 }
 

@@ -10,7 +10,7 @@ use camera::{Camera};
 use common::{Vec2, Vec2u, AABB};
 use entity::Entity;
 use physics::{MovingObject};
-use render::{Renderable, draw, draw_physics, draw_tilemap_collisions};
+use render::{Renderable, draw, draw_physics, draw_tilemap_collisions, draw_tile};
 use tilemap::{Tilemap};
 
 enum PlayerAction {
@@ -28,7 +28,7 @@ enum CameraAction {
   ZoomIn,
 }
 
-enum ProgramMode {
+enum WorldMode {
   Game,
   TilemapEdit,
 }
@@ -51,7 +51,7 @@ fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
   }
 }
 
-fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
+fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, _: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
   if pressed.contains(&Keycode::Space) {
     do_action(PlayerAction::Jump);
   }
@@ -96,7 +96,7 @@ fn input_camera(_: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_action: &mu
   }
 }
 
-fn update_camera(dt_seconds: f64, cam: &mut Camera, following: &Entity) {
+fn update_camera(_/*dt_seconds*/: f64, cam: &mut Camera, following: &Entity) {
   cam.pos.x = following.center.x;
 }
 
@@ -109,6 +109,8 @@ pub struct World {
   camera_pending_actions: Vec<CameraAction>,
   tilemap_intersectons: Vec<Vec2u>,
   camera: Camera,
+  mode: WorldMode,
+  hovered_tile: (i32, i32),
 }
 
 impl World {
@@ -153,9 +155,16 @@ impl World {
       },
       tilemap: tiles,
       tilemap_intersectons: Vec::new(),
+      mode: WorldMode::Game,
+      hovered_tile: (0, 0),
     }
   }
-  pub fn input(&mut self, keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>) {
+  pub fn input(&mut self,
+    keys_down: &HashSet<Keycode>,
+    pressed: &HashSet<Keycode>,
+    released: &HashSet<Keycode>,
+    mouse: &sdl2::mouse::MouseState)
+  {
     {
       let mut do_action = |a: PlayerAction| {
         self.player_pending_actions.push(a);
@@ -169,9 +178,12 @@ impl World {
       };
       input_camera(&keys_down, &pressed, &mut do_cam_action);
     }
+    self.hovered_tile = self.tilemap.tile_for(self.camera.screen2world(mouse.x(), mouse.y()));
+
     // dispatch actions through reducer, (prev_logic_state, actions) -> next_logic_state
     player_resolve_actions(&mut self.player, &self.player_pending_actions);
     camera_resolve_actions(&mut self.camera, &self.camera_pending_actions);
+
     // clean up
     self.player_pending_actions.clear();
     self.camera_pending_actions.clear();
@@ -213,6 +225,7 @@ impl World {
     if let Some(_) = self.player.phys {
       draw_physics(&self.player, renderer, &self.camera);
     }
+    draw_tile(renderer, &self.camera, self.hovered_tile, self.tilemap.tile_size);
   }
   pub fn print_stats(&self) {
     if let Some(ref p) = self.player.phys {
