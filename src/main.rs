@@ -37,6 +37,7 @@ enum CameraAction {
 
 fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
   if let Some(ref mut phys) = player.phys {
+    phys.speed.x = 0.;
     for a in actions {
       match a {
         &PlayerAction::MoveLeft => phys.speed.x -= 16.,
@@ -51,14 +52,14 @@ fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
   }
 }
 
-fn input_player(_: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
+fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, released: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
   if pressed.contains(&Keycode::Space) {
     do_action(PlayerAction::Jump);
   }
-  if pressed.contains(&Keycode::Left) || released.contains(&Keycode::Right) {
+  if keys_down.contains(&Keycode::Left) {
     do_action(PlayerAction::MoveLeft);
   }
-  if pressed.contains(&Keycode::Right) || released.contains(&Keycode::Left) {
+  if keys_down.contains(&Keycode::Right) {
     do_action(PlayerAction::MoveRight);
   }
 }
@@ -150,28 +151,27 @@ impl World {
       // parse input, (inputs, ?prev_logic_state?) -> actions
       input_player(&keys_down, &pressed, &released, &mut do_action);
     }
-    let mut do_cam_action = |a: CameraAction| {
-      self.camera_pending_actions.push(a);
-    };
-    input_camera(&keys_down, &pressed, &mut do_cam_action);
-  }
-  fn update(&mut self, _: f64, dt_seconds: f64) {
+    {
+      let mut do_cam_action = |a: CameraAction| {
+        self.camera_pending_actions.push(a);
+      };
+      input_camera(&keys_down, &pressed, &mut do_cam_action);
+    }
     // dispatch actions through reducer, (prev_logic_state, actions) -> next_logic_state
     player_resolve_actions(&mut self.player, &self.player_pending_actions);
+    camera_resolve_actions(&mut self.camera, &self.camera_pending_actions);
+    // clean up
+    self.player_pending_actions.clear();
+    self.camera_pending_actions.clear();
+  }
+  fn update(&mut self, _: f64, dt_seconds: f64) {
     // step the physics simulation, (prev_phys_state, next_logic_state, time) -> next_phys_state
     if let Some(ref mut p) = self.player.phys {
       self.player.center = p.update(self.player.center, dt_seconds);
     }
-    camera_resolve_actions(&mut self.camera, &self.camera_pending_actions);
-    //self.camera.pos = self.player.center;
-
     if let Some(ref p) = self.player.phys {
       self.tilemap_intersectons = self.tilemap.intersects_box(&p.aabb.offset(self.player.center));
     }
-
-    // clean up
-    self.player_pending_actions.clear();
-    self.camera_pending_actions.clear();
   }
   fn draw(&mut self, renderer: &mut sdl2::render::Renderer) {
     if let Some(_) = self.background.rend {
