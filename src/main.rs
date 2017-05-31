@@ -45,6 +45,7 @@ fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
         &PlayerAction::Jump => {
           if phys.on_ground {
             phys.speed.y += 100.;
+            phys.on_ground = false;
           }
         },
       }
@@ -107,11 +108,11 @@ impl World {
 
 
     let player = Entity {
-      center: Vec2::new(2., 10.),
+      center: Vec2::new(8., 20.),
       rend: None,
       phys: Some(MovingObject {
         speed: Vec2::new(0., 0.),
-        aabb: AABB::new(Vec2::new(0., 0.), Vec2::new(1., 1.)),
+        aabb: AABB::new(Vec2::new(0., 0.), Vec2::new(0.95, 0.95)),
         on_ground: true,
       }),
     };
@@ -165,12 +166,28 @@ impl World {
     self.camera_pending_actions.clear();
   }
   fn update(&mut self, _: f64, dt_seconds: f64) {
+    // TODO: move out of world to phys
+    // TODO: the faster you approach an obstacle, the farther from it you stop because of update distance & backing out
     // step the physics simulation, (prev_phys_state, next_logic_state, time) -> next_phys_state
     if let Some(ref mut p) = self.player.phys {
-      self.player.center = p.update(self.player.center, dt_seconds);
-    }
-    if let Some(ref p) = self.player.phys {
-      self.tilemap_intersectons = self.tilemap.intersects_box(&p.aabb.offset(self.player.center));
+      let next_center = p.update(self.player.center, dt_seconds);
+      let mut test_center = Vec2::new(next_center.x, self.player.center.y);
+      let mut tis = self.tilemap.intersects_box(&p.aabb.offset(test_center));
+      if tis.len() > 0 {
+        test_center.x = self.player.center.x;
+      }
+      test_center.y = next_center.y;
+      tis = self.tilemap.intersects_box(&p.aabb.offset(test_center));
+      if tis.len() > 0 {
+        test_center.y = self.player.center.y;
+        if next_center.y < self.player.center.y {
+          p.on_ground = true;
+          p.speed.y = 0.;
+        } else {
+          p.speed.y = p.speed.y.min(0.);
+        }
+      }
+      self.player.center = test_center;
     }
   }
   fn draw(&mut self, renderer: &mut sdl2::render::Renderer) {
@@ -267,7 +284,9 @@ fn main() {
     frame_counter_accumulator += dt;
     if frame_counter_accumulator.as_secs() > 1 {
       println!("{} {}", frame_counter, phys_counter);
-      println!("pl {:?} {}", world.player.center.x, world.player.center.y);
+      if let Some(ref p) = world.player.phys {
+        println!("pl {:?} {} {} {}", world.player.center.x, world.player.center.y, p.speed.x, p.speed.y);
+      }
       frame_counter_accumulator -= time::Duration::from_secs(1);
       frame_counter = 0;
       phys_counter = 0;

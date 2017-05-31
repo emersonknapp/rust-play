@@ -100,14 +100,26 @@ impl Tilemap {
     )
   }
 
+  fn get_tile(&self, x: usize, y: usize) -> bool {
+    if x >= self.width || y >= self.height {
+      return false;
+    }
+    self.collisions[(y, x)]
+  }
+
   pub fn intersects_box(&self, aabb: &AABB) -> Vec<Vec2u> {
     let mut isects = Vec::new();
     let bl = self.tile_for(aabb.bottom_left());
     let tr = self.tile_for(aabb.top_right());
     for x in bl.0..(tr.0+1) {
       for y in bl.1..(tr.1+1) {
-        if x >= 0 && x < self.width as i32 && y >= 0 && y < self.height as i32 {
-          isects.push(Vec2u::new(x as usize, y as usize));
+        if x < 0 || y < 0 {
+          continue
+        }
+        let xu = x as usize;
+        let yu = y as usize;
+        if self.get_tile(xu, yu) {
+          isects.push(Vec2u::new(xu, yu));
         }
       }
     }

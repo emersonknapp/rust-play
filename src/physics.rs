@@ -1,7 +1,7 @@
 use common::{Vec2, AABB};
 
 // px/sec^2
-const GRAVITY: f64 = 600.;
+const GRAVITY: f64 = 500.;
 
 pub struct MovingObject {
   pub speed: Vec2,
@@ -13,16 +13,7 @@ impl MovingObject {
   pub fn update(&mut self, center: Vec2, dt_seconds: f64) -> Vec2 {
     let dpos = self.speed * dt_seconds;
     let mut next = center + dpos;
-
     self.speed.y -= GRAVITY * dt_seconds;
-
-    if next.y <= self.aabb.half_size.y {
-      next.y = self.aabb.half_size.y;
-      self.speed.y = 0.;
-      self.on_ground = true;
-    } else {
-      self.on_ground = false;
-    }
     next
   }
 }
