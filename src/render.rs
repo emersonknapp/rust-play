@@ -66,20 +66,14 @@ pub fn draw_physics(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Cam
 
 pub fn draw_tilemap_collisions(tm: &Tilemap, intersected: &Vec<Vec2u>, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
   let ref c = tm.collisions;
-  let odd_color = Color::RGBA(255, 255, 0, 80);
-  let even_color = Color::RGBA(0, 255, 255, 80);
   // Draw tilemap collision layer
   for y in 0..c.nrows() {
     for x in 0..c.ncols() {
       let draw_color;
       if c[(y, x)] {
-        draw_color = Color::RGBA(255, 0, 255, 120);
-      }
-      else if (x + y) % 2 == 0 {
-        draw_color = even_color;
-      }
-      else {
-        draw_color = odd_color;
+        draw_color = Color::RGBA(200, 140, 0, 255);
+      } else {
+        continue;
       }
       let bl = Vec2::new(x as f64 * tm.tile_size, y as f64 * tm.tile_size);
       let tile_size = Vec2::new(tm.tile_size, tm.tile_size);
