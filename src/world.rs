@@ -115,7 +115,7 @@ pub struct World {
 
 impl World {
   pub fn new(renderer: &mut Renderer, screen_size: Vec2) -> World {
-    let tiles = Tilemap::from_file(Path::new("assets/level1.lv")).unwrap();
+    let tiles = Tilemap::from_file(Path::new("assets/modified_level.lv")).unwrap();
     let level_size = Vec2::new(tiles.width as f64, tiles.height as f64);
 
 

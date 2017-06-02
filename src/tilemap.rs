@@ -1,14 +1,17 @@
 extern crate nalgebra as na;
 extern crate sdl2;
+
 use self::sdl2::mouse::MouseButton;
+use self::sdl2::keyboard::Keycode;
 use self::na::{DMatrix};
+
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
+use std::io;
 
 use camera::Camera;
-
 use common::{Vec2, Vec2u, AABB, InputState};
 
 // TODO: sparse tilemap representation for large maps
@@ -24,6 +27,7 @@ pub struct Tilemap {
 
 enum TilemapAction {
   ToggleTileCollision(usize, usize),
+  Save,
 }
 
 
@@ -92,6 +96,21 @@ impl Tilemap {
     Ok(tiles)
   }
 
+  pub fn save(&self, p: &Path) -> Result<String, io::Error> {
+    let mut file = File::create(p)?;
+
+    file.write_fmt(format_args!("{} {} {}\n", self.width, self.height, self.tile_size))?;
+
+    for y in (0..self.collisions.nrows()).rev() {
+      for val in self.collisions.row(y).iter() {
+        file.write_all(if *val { b"1 " } else { b"0 " })?;
+      }
+      file.write_all(b"\n")?;
+    }
+
+    Ok("loaded".to_owned())
+  }
+
   fn rightmost(&self) -> f64 {
     self.tile_size * (self.width + 1) as f64
   }
@@ -141,6 +160,9 @@ impl Tilemap {
       &TilemapAction::ToggleTileCollision(x, y) => {
         self.collisions[(y, x)] = !self.collisions[(y, x)]
       },
+      &TilemapAction::Save => {
+        let _ = self.save(Path::new("assets/modified_level.lv"));
+      }
     }
   }
 
@@ -150,6 +172,9 @@ impl Tilemap {
       if let Some((x, y)) = self.tile_for(world_coord) {
         self.resolve_action(&TilemapAction::ToggleTileCollision(x, y));
       }
+    }
+    if input.key_down(&Keycode::LCtrl) && input.key_down(&Keycode::S) {
+      self.resolve_action(&TilemapAction::Save);
     }
   }
 
