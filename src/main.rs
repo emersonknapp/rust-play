@@ -15,7 +15,7 @@ use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
-use common::Vec2;
+use common::{Vec2, InputState};
 use world::{World};
 
 
@@ -34,7 +34,11 @@ fn main() {
 
   let mut event_pump = sdl_context.event_pump().unwrap();
 
-  let mut prev_keys = HashSet::new();
+  let mut prev_keys = event_pump.keyboard_state()
+    .pressed_scancodes()
+    .filter_map(Keycode::from_scancode)
+    .collect();
+  let mut prev_mouse = event_pump.mouse_state();
 
   // game init
   let mut world = World::new(&mut renderer, Vec2::new(640., 480.));
@@ -64,16 +68,18 @@ fn main() {
         _ => {}
       }
     }
-    let keys: HashSet<Keycode> = event_pump.keyboard_state()
-      .pressed_scancodes()
-      .filter_map(Keycode::from_scancode)
-      .collect();
-    let pressed = &keys - &prev_keys;
-    if keys.contains(&Keycode::Escape) {
+    let input = InputState {
+      keys: event_pump.keyboard_state()
+        .pressed_scancodes()
+        .filter_map(Keycode::from_scancode)
+        .collect(),
+      last_keys: prev_keys,
+      mouse: event_pump.mouse_state(),
+      last_mouse: prev_mouse,
+    };
+    if input.key_down(&Keycode::Escape) {
       break 'running;
     }
-    let released = &prev_keys - &keys;
-    let mouse = event_pump.mouse_state();
 
     // prepare for drawing
     renderer.set_draw_color(Color::RGBA(0,0,0,255));
@@ -81,7 +87,7 @@ fn main() {
 
     { // here is where modes differ. what is input, upadted, and drawn
       // invoke game logic
-      world.input(&keys, &pressed, &released, &mouse);
+      world.input(&input);
       while dt_accum >= sim_dt {
         phys_counter += 1;
         world.update(0., sim_dt_secs);
@@ -92,14 +98,14 @@ fn main() {
 
     // loop finalizing
     renderer.present();
-    prev_keys = keys;
+    prev_keys = input.keys;
+    prev_mouse = input.mouse;
 
     // Debug output
     frame_counter += 1;
     frame_counter_accumulator += dt;
     if frame_counter_accumulator.as_secs() > 1 {
       println!("cycles {} {}", frame_counter, phys_counter);
-      println!("mouse {} {}", mouse.x(), mouse.y());
       world.print_stats();
       println!();
 

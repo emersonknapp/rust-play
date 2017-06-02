@@ -1,11 +1,15 @@
 extern crate nalgebra as na;
+extern crate sdl2;
+use self::sdl2::mouse::MouseButton;
 use self::na::{DMatrix};
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
 
-use common::{Vec2, Vec2u, AABB};
+use camera::Camera;
+
+use common::{Vec2, Vec2u, AABB, InputState};
 
 // TODO: sparse tilemap representation for large maps
 // OR: tilemap chunking
@@ -18,6 +22,9 @@ pub struct Tilemap {
   pub height: usize,
 }
 
+enum TilemapAction {
+  ToggleTileCollision(usize, usize),
+}
 
 
 impl Tilemap {
@@ -93,11 +100,16 @@ impl Tilemap {
     self.tile_size * (self.height + 1) as f64
   }
 
-  pub fn tile_for(&self, local_coord: Vec2) -> (i32, i32) {
-    (
-      (local_coord.x / self.tile_size).floor() as i32,
-      (local_coord.y / self.tile_size).floor() as i32,
-    )
+  pub fn tile_for(&self, local_coord: Vec2) -> Option<(usize, usize)> {
+    if local_coord.x < 0. || local_coord.y < 0. {
+      return None;
+    }
+    let x = (local_coord.x / self.tile_size).floor();
+    let y = (local_coord.y / self.tile_size).floor();
+    if x as usize >= self.width || y as usize >= self.height {
+      return None;
+    }
+    Some((x as usize, y as usize))
   }
 
   fn get_tile(&self, x: usize, y: usize) -> bool {
@@ -109,22 +121,36 @@ impl Tilemap {
 
   pub fn intersects_box(&self, aabb: &AABB) -> Vec<Vec2u> {
     let mut isects = Vec::new();
-    let bl = self.tile_for(aabb.bottom_left());
-    let tr = self.tile_for(aabb.top_right());
-    for x in bl.0..(tr.0+1) {
-      for y in bl.1..(tr.1+1) {
-        if x < 0 || y < 0 {
-          continue
-        }
-        let xu = x as usize;
-        let yu = y as usize;
-        if self.get_tile(xu, yu) {
-          isects.push(Vec2u::new(xu, yu));
+    let obl = self.tile_for(aabb.bottom_left());
+    let otr = self.tile_for(aabb.top_right());
+    // TODO: this is wrong on the edges, needs to clamp
+    if let (Some(bl), Some(tr)) = (obl, otr) {
+      for x in bl.0..(tr.0+1) {
+        for y in bl.1..(tr.1+1) {
+          if self.get_tile(x, y) {
+            isects.push(Vec2u::new(x, y));
+          }
         }
       }
     }
     isects
   }
 
+  fn resolve_action(&mut self, action: &TilemapAction) {
+    match action {
+      &TilemapAction::ToggleTileCollision(x, y) => {
+        self.collisions[(y, x)] = !self.collisions[(y, x)]
+      },
+    }
+  }
+
+  pub fn input(&mut self, input: &InputState, camera: &Camera) {
+    if input.mouse_pressed(MouseButton::Left) {
+      let world_coord = camera.screen2world(input.mouse.x(), input.mouse.y());
+      if let Some((x, y)) = self.tile_for(world_coord) {
+        self.resolve_action(&TilemapAction::ToggleTileCollision(x, y));
+      }
+    }
+  }
 
 }

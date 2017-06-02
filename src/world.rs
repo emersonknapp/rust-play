@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use camera::{Camera};
-use common::{Vec2, Vec2u, AABB};
+use common::{Vec2, Vec2u, AABB, InputState};
 use entity::Entity;
 use physics::{MovingObject};
 use render::{Renderable, draw, draw_physics, draw_tilemap_collisions, draw_tile};
@@ -51,14 +51,14 @@ fn player_resolve_actions(player: &mut Entity, actions: &Vec<PlayerAction>) {
   }
 }
 
-fn input_player(keys_down: &HashSet<Keycode>, pressed: &HashSet<Keycode>, _: &HashSet<Keycode>, do_action: &mut FnMut(PlayerAction)) {
-  if pressed.contains(&Keycode::Space) {
+fn input_player(input: &InputState, do_action: &mut FnMut(PlayerAction)) {
+  if input.key_pressed(&Keycode::Space) {
     do_action(PlayerAction::Jump);
   }
-  if keys_down.contains(&Keycode::Left) {
+  if input.key_down(&Keycode::Left) {
     do_action(PlayerAction::MoveLeft);
   }
-  if keys_down.contains(&Keycode::Right) {
+  if input.key_down(&Keycode::Right) {
     do_action(PlayerAction::MoveRight);
   }
 }
@@ -75,23 +75,24 @@ fn camera_resolve_actions(camera: &mut Camera, actions: &Vec<CameraAction>) {
     }
   }
 }
-fn input_camera(_: &HashSet<Keycode>, pressed: &HashSet<Keycode>, do_action: &mut FnMut(CameraAction)) {
-  if pressed.contains(&Keycode::W) {
+
+fn input_camera(input: &InputState, do_action: &mut FnMut(CameraAction)) {
+  if input.key_pressed(&Keycode::W) {
     do_action(CameraAction::MoveUp);
   }
-  if pressed.contains(&Keycode::A) {
+  if input.key_pressed(&Keycode::A) {
     do_action(CameraAction::MoveLeft);
   }
-  if pressed.contains(&Keycode::S) {
+  if input.key_pressed(&Keycode::S) {
     do_action(CameraAction::MoveDown);
   }
-  if pressed.contains(&Keycode::D) {
+  if input.key_pressed(&Keycode::D) {
     do_action(CameraAction::MoveRight);
   }
-  if pressed.contains(&Keycode::Q) {
+  if input.key_pressed(&Keycode::Q) {
     do_action(CameraAction::ZoomOut);
   }
-  if pressed.contains(&Keycode::E) {
+  if input.key_pressed(&Keycode::E) {
     do_action(CameraAction::ZoomIn);
   }
 }
@@ -110,7 +111,6 @@ pub struct World {
   tilemap_intersectons: Vec<Vec2u>,
   camera: Camera,
   mode: WorldMode,
-  hovered_tile: (i32, i32),
 }
 
 impl World {
@@ -156,29 +156,24 @@ impl World {
       tilemap: tiles,
       tilemap_intersectons: Vec::new(),
       mode: WorldMode::Game,
-      hovered_tile: (0, 0),
     }
   }
-  pub fn input(&mut self,
-    keys_down: &HashSet<Keycode>,
-    pressed: &HashSet<Keycode>,
-    released: &HashSet<Keycode>,
-    mouse: &sdl2::mouse::MouseState)
+  pub fn input(&mut self, input: &InputState)
   {
     {
       let mut do_action = |a: PlayerAction| {
         self.player_pending_actions.push(a);
       };
       // parse input, (inputs, ?prev_logic_state?) -> actions
-      input_player(&keys_down, &pressed, &released, &mut do_action);
+      input_player(input, &mut do_action);
     }
     {
       let mut do_cam_action = |a: CameraAction| {
         self.camera_pending_actions.push(a);
       };
-      input_camera(&keys_down, &pressed, &mut do_cam_action);
+      input_camera(input, &mut do_cam_action);
     }
-    self.hovered_tile = self.tilemap.tile_for(self.camera.screen2world(mouse.x(), mouse.y()));
+    self.tilemap.input(input, &self.camera);
 
     // dispatch actions through reducer, (prev_logic_state, actions) -> next_logic_state
     player_resolve_actions(&mut self.player, &self.player_pending_actions);
@@ -225,7 +220,7 @@ impl World {
     if let Some(_) = self.player.phys {
       draw_physics(&self.player, renderer, &self.camera);
     }
-    draw_tile(renderer, &self.camera, self.hovered_tile, self.tilemap.tile_size);
+    // draw_tile(renderer, &self.camera, self.hovered_tile, self.tilemap.tile_size);
   }
   pub fn print_stats(&self) {
     if let Some(ref p) = self.player.phys {
