@@ -31,18 +31,18 @@ impl AABB {
   pub fn top_right(&self) -> Vec2 {
     self.center + self.half_size
   }
-  pub fn bottom_right(&self) -> Vec2 {
-    Vec2::new(self.center.x + self.half_size.x, self.center.y - self.half_size.y)
-  }
-  pub fn top_left(&self) -> Vec2 {
-    Vec2::new(self.center.x - self.half_size.x, self.center.y + self.half_size.y)
-  }
-  pub fn intersects(&self, other: &AABB) -> bool {
-    ! (
-      ((self.center.x - other.center.x).abs() > (self.half_size.x + other.half_size.x)) ||
-      ((self.center.y - other.center.y).abs() > self.half_size.y + other.half_size.y)
-    )
-  }
+  // pub fn bottom_right(&self) -> Vec2 {
+  //   Vec2::new(self.center.x + self.half_size.x, self.center.y - self.half_size.y)
+  // }
+  // pub fn top_left(&self) -> Vec2 {
+  //   Vec2::new(self.center.x - self.half_size.x, self.center.y + self.half_size.y)
+  // }
+  // pub fn intersects(&self, other: &AABB) -> bool {
+  //   ! (
+  //     ((self.center.x - other.center.x).abs() > (self.half_size.x + other.half_size.x)) ||
+  //     ((self.center.y - other.center.y).abs() > self.half_size.y + other.half_size.y)
+  //   )
+  // }
 }
 
 pub struct InputState {
@@ -59,9 +59,9 @@ impl InputState {
   pub fn key_pressed(&self, k: &Keycode) -> bool {
     self.keys.contains(k) && !self.last_keys.contains(k)
   }
-  pub fn key_released(&self, k: &Keycode) -> bool {
-    !self.keys.contains(k) && self.last_keys.contains(k)
-  }
+  // pub fn key_released(&self, k: &Keycode) -> bool {
+  //   !self.keys.contains(k) && self.last_keys.contains(k)
+  // }
   pub fn mouse_pressed(&self, b: MouseButton) -> bool {
     self.mouse.is_mouse_button_pressed(b) && !self.last_mouse.is_mouse_button_pressed(b)
   }

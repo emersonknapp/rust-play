@@ -1,5 +1,4 @@
 extern crate sdl2;
-mod physics;
 mod camera;
 mod common;
 mod render;
@@ -7,8 +6,6 @@ mod tilemap;
 mod components;
 mod systems;
 
-use std::collections::HashSet;
-use std::path::Path;
 use std::{time, thread};
 
 use sdl2::event::Event;

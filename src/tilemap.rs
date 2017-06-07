@@ -1,8 +1,6 @@
 extern crate nalgebra as na;
 extern crate sdl2;
 
-use self::sdl2::mouse::MouseButton;
-use self::sdl2::keyboard::Keycode;
 use self::na::{DMatrix};
 
 use std::fs::File;
@@ -11,8 +9,7 @@ use std::io::BufReader;
 use std::path::Path;
 use std::io;
 
-use camera::Camera;
-use common::{Vec2, Vec2u, AABB, InputState};
+use common::{Vec2, Vec2u, AABB};
 
 // TODO: sparse tilemap representation for large maps
 // OR: tilemap chunking
@@ -106,13 +103,13 @@ impl Tilemap {
     Ok("loaded".to_owned())
   }
 
-  fn rightmost(&self) -> f64 {
-    self.tile_size * (self.width + 1) as f64
-  }
-
-  fn topmost(&self) -> f64 {
-    self.tile_size * (self.height + 1) as f64
-  }
+  // fn rightmost(&self) -> f64 {
+  //   self.tile_size * (self.width + 1) as f64
+  // }
+  //
+  // fn topmost(&self) -> f64 {
+  //   self.tile_size * (self.height + 1) as f64
+  // }
 
   pub fn tile_for(&self, local_coord: Vec2) -> Option<(usize, usize)> {
     if local_coord.x < 0. || local_coord.y < 0. {
