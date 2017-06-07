@@ -1,0 +1,288 @@
+extern crate sdl2;
+use self::sdl2::keyboard::Keycode;
+use self::sdl2::mouse::MouseButton;
+use self::sdl2::render::Renderer;
+
+use std::path::Path;
+use std::time;
+
+use common::{InputState, Vec2, Vec2u};
+use components::{
+  PlayerAction,
+  CameraAction,
+  TilemapAction,
+  Velocity,
+  Position,
+  World,
+  Collision,
+};
+use camera::Camera;
+use tilemap::Tilemap;
+use render;
+
+const GRAVITY: f64 = 500.;
+
+pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
+  let mut world = World::new();
+  world.current_player = world.new_player();
+  let tm_id = world.new_tilemap();
+
+  let level_size;
+  let size;
+  let pos;
+  {
+    let ref tiles = world.tilemaps.get(&tm_id).unwrap();
+    level_size = Vec2::new(tiles.width as f64, tiles.height as f64);
+    size = level_size * tiles.tile_size;
+    pos = level_size * tiles.tile_size / 2.;
+  }
+  let bg_id = world.new_background(renderer, pos, size);
+
+  world.current_camera = world.new_camera(tm_id, screen_size);
+
+  println!("World created, player {}, tilamep {}, camera {}, background {}",
+    world.current_player, tm_id, world.current_camera, bg_id);
+  world
+}
+
+pub fn player_input_controller(input: &InputState, actions: &mut Vec<PlayerAction>) {
+  if input.key_pressed(&Keycode::Space) {
+    actions.push(PlayerAction::Jump);
+  }
+  if input.key_down(&Keycode::Left) {
+    actions.push(PlayerAction::MoveLeft);
+  }
+  if input.key_down(&Keycode::Right) {
+    actions.push(PlayerAction::MoveRight);
+  }
+}
+
+fn camera_input_controller(input: &InputState, actions: &mut Vec<CameraAction>) {
+  if input.key_pressed(&Keycode::W) {
+    actions.push(CameraAction::MoveUp);
+  }
+  if input.key_pressed(&Keycode::A) {
+    actions.push(CameraAction::MoveLeft);
+  }
+  if input.key_pressed(&Keycode::S) {
+    actions.push(CameraAction::MoveDown);
+  }
+  if input.key_pressed(&Keycode::D) {
+    actions.push(CameraAction::MoveRight);
+  }
+  if input.key_pressed(&Keycode::Q) {
+    actions.push(CameraAction::ZoomOut);
+  }
+  if input.key_pressed(&Keycode::E) {
+    actions.push(CameraAction::ZoomIn);
+  }
+}
+
+fn tilemap_input_controller(input: &InputState, actions: &mut Vec<TilemapAction>) {
+    if input.mouse_pressed(MouseButton::Left) {
+      actions.push(TilemapAction::ToggleTileCollision(input.mouse.x(), input.mouse.y()));
+    }
+    if input.key_down(&Keycode::LCtrl) && input.key_down(&Keycode::S) {
+      actions.push(TilemapAction::Save);
+    }
+}
+
+fn player_update(actions: &Vec<PlayerAction>, velocity: &mut Velocity, on_ground: &mut bool) {
+  velocity.x = 0.;
+  for a in actions {
+    match a {
+      &PlayerAction::MoveLeft => velocity.x -= 16.,
+      &PlayerAction::MoveRight => velocity.x += 16.,
+      &PlayerAction::Jump => {
+        if *on_ground {
+          velocity.y += 100.;
+          *on_ground = false;
+        }
+      },
+    }
+  }
+}
+
+fn camera_update(actions: &Vec<CameraAction>, cam: &mut Camera) {
+  for a in actions {
+    match a {
+      &CameraAction::MoveLeft => cam.pos.x -= 2.,
+      &CameraAction::MoveRight => cam.pos.x += 2.,
+      &CameraAction::MoveUp => cam.pos.y -= 2.,
+      &CameraAction::MoveDown => cam.pos.y += 2.,
+      &CameraAction::ZoomOut => cam.fovy *= 1.25,
+      &CameraAction::ZoomIn => cam.fovy *= 0.8,
+    }
+  }
+}
+
+fn tilemap_update(actions: &Vec<TilemapAction>, camera: &Camera, tilemap: &mut Tilemap) {
+  for a in actions {
+    match a {
+      &TilemapAction::ToggleTileCollision(screen_x, screen_y) => {
+        // TODO[ek] reconcile camera w/ screen2world again
+        // let world_coord = camera.screen2world(screen_x, screen_y);
+        // if let Some((x, y)) = tilemap.tile_for(world_coord) {
+        //   tilemap.collisions[(y, x)] = !tilemap.collisions[(y, x)]
+        // }
+      },
+      &TilemapAction::Save => {
+        let _ = tilemap.save(Path::new("assets/modified_level.lv"));
+      }
+    }
+  }
+}
+
+fn physics_update(velocity: &mut Velocity, position: &mut Position, collision: &Collision, on_ground: &mut bool, dt_seconds: f64) {
+  let dpos = *velocity * dt_seconds;
+  let next = *position + dpos;
+  velocity.y -= GRAVITY * dt_seconds;
+
+  let mut test = Vec2::new(next.x, position.y);
+  // TODO collide with tilemap(s)
+  let mut test_intersections: Vec<Vec2u> = Vec::new(); // tilemap.intersects_box(collision.offset(next))
+  if test_intersections.len() > 0 {
+    test.x = position.x;
+  }
+  test.y = next.y;
+  test_intersections = Vec::new(); // tilemap.instersects_box(collision.offset(next))
+  if test_intersections.len() > 0 {
+    test.y = position.y;
+    if next.y < position.y {
+      // landed
+      *on_ground = true;
+      velocity.y = 0.;
+    } else {
+      // bonked your head
+      velocity.y = velocity.y.min(0.);
+    }
+  }
+  // TODO remove
+  if test.y < 0. {
+    test.y = 0.;
+    *on_ground = true;
+  }
+  *position = test;
+}
+
+fn camera_follow(camera_pos: &mut Position, following_pos: &Position) {
+  camera_pos.x = following_pos.x;
+}
+
+
+pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Renderer, dt: time::Duration) -> time::Duration {
+  for id in &world.entities {
+    // input systems
+    if let Some(ref mut actions) = world.player_actions.get_mut(&id) {
+      player_input_controller(input, actions);
+    }
+    if let Some(ref mut actions) = world.camera_actions.get_mut(&id) {
+      camera_input_controller(input, actions);
+    }
+    // TODO tilemap editor tool is its own entity
+    if let Some(ref mut actions) = world.tilemap_actions.get_mut(&id) {
+      tilemap_input_controller(input, actions);
+    }
+
+    // logic systems
+    // NOTE: use all pending actions in this block, they will be cleared
+    if let (
+      Some(ref actions), Some(ref mut velocity), Some(ref mut on_ground)
+    ) = (
+      world.player_actions.get(&id), world.velocities.get_mut(&id), world.groundables.get_mut(&id)
+    ) {
+      player_update(actions, velocity, on_ground);
+    }
+
+    if let (
+      Some(ref actions), Some(ref mut camera)
+    ) = (
+      world.camera_actions.get(&id), world.cameras.get_mut(&id)
+    ) {
+      camera_update(actions, camera);
+    }
+
+    if let (
+      Some(ref actions), Some(ref mut tilemap), Some(ref camera)
+    ) = (
+      world.tilemap_actions.get(&id), world.tilemaps.get_mut(&id), world.cameras.get(&world.current_camera),
+    ) {
+      tilemap_update(actions, camera, tilemap);
+    }
+
+    // Clear up all pending actions, now that they have been resolved
+    for (_, actions) in &mut world.player_actions {
+      actions.clear();
+    }
+    for (_, actions) in &mut world.camera_actions {
+      actions.clear();
+    }
+    for (_, actions) in &mut world.tilemap_actions {
+      actions.clear();
+    }
+  }
+
+  // simulation systems
+  let sim_dt = time::Duration::from_millis(10);
+  let sim_dt_secs = sim_dt.as_secs() as f64 + (sim_dt.subsec_nanos() as f64 / 1000000000.);
+  let mut dt_accum = dt;
+  while dt_accum >= sim_dt {
+    for id in &world.entities {
+      // run physics
+      if let (
+        Some(ref mut velocity), Some(ref mut position), Some(ref collision), Some(ref mut on_ground)
+      ) = (
+        world.velocities.get_mut(&id), world.positions.get_mut(&id), world.collisions.get(&id), world.groundables.get_mut(&id)
+      ) {
+        physics_update(velocity, position, collision, on_ground, sim_dt_secs);
+      }
+
+      // update camera follow
+      if let (Some(ref mut camera), Some(ref player_pos)) =
+             (world.cameras.get_mut(&world.current_camera), world.positions.get(&world.current_player))
+      {
+        camera_follow(&mut camera.pos, player_pos)
+      }
+      // TODO reactions to physics collisions?
+
+    }
+    dt_accum -= sim_dt;
+  }
+
+  // TODO clear all dead entities
+
+  // output systems
+  if let Some(ref camera) = world.cameras.get(&world.current_camera) {
+    //TODO render needs drawing order
+    for id in &world.entities {
+      if let (Some(ref sprite), Some(ref pos)) =
+             (world.sprites.get(&id), world.positions.get(&id))
+      {
+        render::draw(sprite, pos, renderer, camera);
+      }
+    }
+    for id in &world.entities {
+      if let (Some(ref tilemap),) = (world.tilemaps.get(&id),) {
+        render::draw_tilemap_collisions(&tilemap, &Vec::new(), renderer, camera);
+      }
+    }
+    for id in &world.entities {
+      if let (Some(ref collision), Some(ref position), Some(on_ground)) =
+             (world.collisions.get(&id), world.positions.get(&id), world.groundables.get(&id))
+      {
+        render::draw_physics(position, collision, *on_ground, renderer, camera);
+      }
+    }
+  }
+
+  // return unused time, to be passed forward next frame
+  dt_accum
+}
+
+// TODO
+  // pub fn print_stats(&self) {
+  //   if let Some(ref p) = self.player.phys {
+  //       println!("pl {} {} {} {}",
+  //         self.player.center.x, self.player.center.y, p.speed.x, p.speed.y);
+  //   }
+  // }

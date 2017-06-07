@@ -2,10 +2,10 @@ extern crate sdl2;
 mod physics;
 mod camera;
 mod common;
-mod entity;
 mod render;
 mod tilemap;
-mod world;
+mod components;
+mod systems;
 
 use std::collections::HashSet;
 use std::path::Path;
@@ -16,7 +16,7 @@ use sdl2::keyboard::Keycode;
 use sdl2::pixels::Color;
 
 use common::{Vec2, InputState};
-use world::{World};
+use systems::{create_world, run_systems};
 
 
 fn main() {
@@ -41,10 +41,10 @@ fn main() {
   let mut prev_mouse = event_pump.mouse_state();
 
   // game init
-  let mut world = World::new(&mut renderer, Vec2::new(640., 480.));
+  let mut world = create_world(&mut renderer, Vec2::new(640., 480.));
+  // let mut world = World::new(&mut renderer, Vec2::new(640., 480.));
 
   let sim_dt = time::Duration::from_millis(10);
-  let sim_dt_secs = sim_dt.as_secs() as f64 + (sim_dt.subsec_nanos() as f64 / 1000000000.);
   let target_frame_time = time::Duration::from_millis(16);
   let mut last_time = time::Instant::now();
   let mut dt_accum = time::Duration::new(0, 0);
@@ -85,16 +85,7 @@ fn main() {
     renderer.set_draw_color(Color::RGBA(0,0,0,255));
     renderer.clear();
 
-    { // here is where modes differ. what is input, upadted, and drawn
-      // invoke game logic
-      world.input(&input);
-      while dt_accum >= sim_dt {
-        phys_counter += 1;
-        world.update(0., sim_dt_secs);
-        dt_accum -= sim_dt;
-      }
-      world.draw(&mut renderer);
-    }
+    dt_accum = run_systems(&mut world, &input, &mut renderer, sim_dt);
 
     // loop finalizing
     renderer.present();
@@ -106,7 +97,7 @@ fn main() {
     frame_counter_accumulator += dt;
     if frame_counter_accumulator.as_secs() > 1 {
       println!("cycles {} {}", frame_counter, phys_counter);
-      world.print_stats();
+      // world.print_stats();
       println!();
 
       frame_counter_accumulator -= time::Duration::from_secs(1);

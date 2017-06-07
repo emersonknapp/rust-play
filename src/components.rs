@@ -1,0 +1,174 @@
+extern crate sdl2;
+extern crate nalgebra as na;
+
+use std::collections::{HashMap, HashSet};
+use std::path::Path;
+
+use self::na::DMatrix;
+
+use common::{Vec2, AABB};
+use render::Sprite;
+use tilemap::Tilemap;
+use camera::Camera;
+
+pub enum PlayerAction {
+  MoveLeft,
+  MoveRight,
+  Jump,
+}
+
+pub enum CameraAction {
+  MoveLeft,
+  MoveRight,
+  MoveUp,
+  MoveDown,
+  ZoomOut,
+  ZoomIn,
+}
+
+pub enum TilemapAction {
+  ToggleTileCollision(i32, i32),
+  Save,
+}
+
+// Components
+pub type Position = Vec2;
+
+pub type Collision = AABB;
+
+pub type Velocity = Vec2;
+
+type Groundable = bool;
+
+pub type PlayerActions = Vec<PlayerAction>;
+pub type CameraActions = Vec<CameraAction>;
+pub type TilemapActions = Vec<TilemapAction>;
+
+
+type ID = usize;
+
+pub struct World {
+  pub positions: HashMap<ID, Position>,
+  pub sprites: HashMap<ID, Sprite>,
+  pub collisions: HashMap<ID, Collision>,
+  pub velocities: HashMap<ID, Velocity>,
+  pub groundables: HashMap<ID, Groundable>,
+  pub tilemaps: HashMap<ID, Tilemap>,
+  pub cameras: HashMap<ID, Camera>,
+
+  pub player_actions: HashMap<ID, PlayerActions>,
+  pub camera_actions: HashMap<ID, CameraActions>,
+  pub tilemap_actions: HashMap<ID, TilemapActions>,
+
+  pub entities: HashSet<ID>,
+  next: ID,
+
+  pub current_camera: ID,
+  pub current_player: ID,
+}
+
+impl World {
+  pub fn new() -> World {
+    World {
+      positions: HashMap::new(),
+      sprites: HashMap::new(),
+      collisions: HashMap::new(),
+      velocities: HashMap::new(),
+      groundables: HashMap::new(),
+      tilemaps: HashMap::new(),
+      cameras: HashMap::new(),
+
+      player_actions: HashMap::new(),
+      camera_actions: HashMap::new(),
+      tilemap_actions: HashMap::new(),
+
+      entities: HashSet::new(),
+      next: 1,
+
+      current_camera: 0,
+      current_player: 0,
+    }
+  }
+
+  fn new_entity(&mut self) -> ID {
+    let id = self.next;
+    self.entities.insert(id);
+    self.next += 1;
+    id
+  }
+
+  fn delete_entity(&mut self, id: ID) {
+    self.positions.remove(&id);
+    self.sprites.remove(&id);
+    self.collisions.remove(&id);
+    self.velocities.remove(&id);
+    self.groundables.remove(&id);
+    self.tilemaps.remove(&id);
+    self.cameras.remove(&id);
+
+    self.player_actions.remove(&id);
+    self.camera_actions.remove(&id);
+    self.tilemap_actions.remove(&id);
+
+    self.entities.remove(&id);
+  }
+
+  pub fn new_player(&mut self) -> ID {
+    let id = self.new_entity();
+    self.positions.insert(id, Position::new(8., 4.));
+    // self.sprites.insert(id, Sprite {
+    //
+    // };
+    self.collisions.insert(id, Collision::new(
+      Vec2::new(0., 0.), Vec2::new(0.95, 1.45))
+    );
+    self.velocities.insert(id, Velocity::new(0., 0.));
+    self.groundables.insert(id, false);
+    self.player_actions.insert(id, Vec::new());
+    id
+  }
+
+  pub fn new_tilemap(&mut self) -> ID {
+    let id = self.new_entity();
+    self.positions.insert(id, Position::new(0., 0.));
+    self.tilemaps.insert(id, Tilemap::from_file(
+      Path::new("assets/modified_level.lv")
+    ).unwrap());
+    self.tilemap_actions.insert(id, Vec::new());
+    id
+  }
+
+  pub fn new_camera(&mut self, tilemap_id: ID, screen_size: Vec2) -> ID {
+    let id = self.new_entity();
+    let ref tilemap = self.tilemaps.get(&tilemap_id).unwrap();
+    self.cameras.insert(id, Camera {
+      fovy: tilemap.height as f64 * tilemap.tile_size,
+      screen_height: screen_size.y,
+      ratio: screen_size.x / screen_size.y,
+      pos: Vec2::new(0., tilemap.height as f64/ 2. * tilemap.tile_size)
+    });
+    self.camera_actions.insert(id, Vec::new());
+    id
+  }
+
+  pub fn new_background(&mut self, renderer: &mut sdl2::render::Renderer, center: Vec2, size: Vec2) -> ID {
+    let id = self.new_entity();
+    self.positions.insert(id, Position::new(0., 0.));
+    self.sprites.insert(id, Sprite::new(
+      renderer,
+      "assets/background.png",
+      AABB::new(center, size / 2.),
+    ));
+    id
+  }
+
+  pub fn new_static_obstacle(&mut self) -> ID {
+    let id = self.new_entity();
+    self.positions.insert(id, Position::new(0., 0.));
+    self.collisions.insert(id, Collision::new(
+      Vec2::new(0., 0.), Vec2::new(2., 2.),
+    ));
+    // self.sprites.insert(id, Sprite::new()
+    id
+  }
+}

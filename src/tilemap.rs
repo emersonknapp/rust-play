@@ -25,11 +25,6 @@ pub struct Tilemap {
   pub height: usize,
 }
 
-enum TilemapAction {
-  ToggleTileCollision(usize, usize),
-  Save,
-}
-
 
 impl Tilemap {
   pub fn new(width: usize, height: usize, tile_size: f64) -> Tilemap {
@@ -154,28 +149,4 @@ impl Tilemap {
     }
     isects
   }
-
-  fn resolve_action(&mut self, action: &TilemapAction) {
-    match action {
-      &TilemapAction::ToggleTileCollision(x, y) => {
-        self.collisions[(y, x)] = !self.collisions[(y, x)]
-      },
-      &TilemapAction::Save => {
-        let _ = self.save(Path::new("assets/modified_level.lv"));
-      }
-    }
-  }
-
-  pub fn input(&mut self, input: &InputState, camera: &Camera) {
-    if input.mouse_pressed(MouseButton::Left) {
-      let world_coord = camera.screen2world(input.mouse.x(), input.mouse.y());
-      if let Some((x, y)) = self.tile_for(world_coord) {
-        self.resolve_action(&TilemapAction::ToggleTileCollision(x, y));
-      }
-    }
-    if input.key_down(&Keycode::LCtrl) && input.key_down(&Keycode::S) {
-      self.resolve_action(&TilemapAction::Save);
-    }
-  }
-
 }

@@ -2,8 +2,8 @@ extern crate sdl2;
 
 use camera::Camera;
 use common::{Vec2, Vec2u, AABB};
-use entity::Entity;
 use tilemap::Tilemap;
+use components::{Position, Collision};
 
 use std::path::Path;
 
@@ -12,19 +12,18 @@ use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use sdl2::render::Renderer;
 
-
-pub struct Renderable {
+pub struct Sprite {
   aabb: AABB,
   texture: sdl2::render::Texture,
   source_rect: sdl2::rect::Rect,
 }
 
-impl Renderable {
-  pub fn new(renderer: &sdl2::render::Renderer, tex_path: &str, aabb: AABB) -> Renderable {
+impl Sprite {
+  pub fn new(renderer: &sdl2::render::Renderer, tex_path: &str, aabb: AABB) -> Sprite {
     let p = Path::new(tex_path);
     let surf = sdl2::surface::Surface::from_file(p).unwrap();
     let texture = renderer.create_texture_from_surface(&surf).unwrap();
-    Renderable {
+    Sprite {
       aabb: aabb,
       texture: texture,
       source_rect: Rect::new(0, 0, surf.width(), surf.height()),
@@ -37,32 +36,27 @@ impl Renderable {
   // }
 }
 
-pub fn draw(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
-  if let Some(ref rend) = e.rend {
-    let bl = e.center + rend.aabb.center - rend.aabb.half_size;
-    let draw_rect = cam.to_draw_rect(bl, rend.aabb.half_size * 2.);
+pub fn draw(sprite: &Sprite, pos: &Position, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
+    let bl = pos + sprite.aabb.center - sprite.aabb.half_size;
+    let draw_rect = cam.to_draw_rect(bl, sprite.aabb.half_size * 2.);
 
     renderer.copy(
-      &rend.texture,
-      Some(rend.source_rect),
+      &sprite.texture,
+      Some(sprite.source_rect),
       Some(draw_rect)
-    ).unwrap();
-  }
+    );
 }
 
-pub fn draw_physics(e: &Entity, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
+pub fn draw_physics(position: &Position, collision: &Collision, on_ground: bool, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
   let ground_color = Color::RGBA(0, 0, 255, 255);
   let air_color = Color::RGBA(255, 0, 0,  255);
+  let draw_color = if on_ground { ground_color } else { air_color };
 
-  if let Some(ref phys) = e.phys {
-    let draw_color = if phys.on_ground { ground_color } else { air_color };
+  let bl = collision.bottom_left() + position;
+  let draw_rect = cam.to_draw_rect(bl, collision.half_size * 2.);
 
-    let bl = phys.aabb.bottom_left() + e.center;
-    let draw_rect = cam.to_draw_rect(bl, phys.aabb.half_size * 2.);
-
-    renderer.set_draw_color(draw_color);
-    let _ = renderer.fill_rect(draw_rect);
-  }
+  renderer.set_draw_color(draw_color);
+  let _ = renderer.fill_rect(draw_rect);
 }
 
 pub fn draw_tilemap_collisions(tm: &Tilemap, intersected: &Vec<Vec2u>, renderer: &mut sdl2::render::Renderer, cam: &Camera) {
