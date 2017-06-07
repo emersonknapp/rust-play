@@ -121,10 +121,10 @@ fn tilemap_update(actions: &Vec<TilemapAction>, camera: &Camera, tilemap: &mut T
     match a {
       &TilemapAction::ToggleTileCollision(screen_x, screen_y) => {
         // TODO[ek] reconcile camera w/ screen2world again
-        // let world_coord = camera.screen2world(screen_x, screen_y);
-        // if let Some((x, y)) = tilemap.tile_for(world_coord) {
-        //   tilemap.collisions[(y, x)] = !tilemap.collisions[(y, x)]
-        // }
+        let world_coord = camera.screen2world(screen_x, screen_y);
+        if let Some((x, y)) = tilemap.tile_for(world_coord) {
+          tilemap.collisions[(y, x)] = !tilemap.collisions[(y, x)]
+        }
       },
       &TilemapAction::Save => {
         let _ = tilemap.save(Path::new("assets/modified_level.lv"));
@@ -135,9 +135,10 @@ fn tilemap_update(actions: &Vec<TilemapAction>, camera: &Camera, tilemap: &mut T
 
 fn physics_update(velocity: &mut Velocity, position: &mut Position, collision: &Collision, on_ground: &mut bool, dt_seconds: f64) {
   let dpos = *velocity * dt_seconds;
-  let next = *position + dpos;
+  let mut next = *position + dpos;
   velocity.y -= GRAVITY * dt_seconds;
 
+  if false {
   let mut test = Vec2::new(next.x, position.y);
   // TODO collide with tilemap(s)
   let mut test_intersections: Vec<Vec2u> = Vec::new(); // tilemap.intersects_box(collision.offset(next))
@@ -157,12 +158,15 @@ fn physics_update(velocity: &mut Velocity, position: &mut Position, collision: &
       velocity.y = velocity.y.min(0.);
     }
   }
-  // TODO remove
-  if test.y < 0. {
-    test.y = 0.;
+  }
+
+  // TODO remove ground check, go back to collisions
+  if next.y < 0. {
+    next.y = 0.;
+    velocity.y = 0.;
     *on_ground = true;
   }
-  *position = test;
+  *position = next;
 }
 
 fn camera_follow(camera_pos: &mut Position, following_pos: &Position) {
