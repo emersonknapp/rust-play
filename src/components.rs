@@ -65,6 +65,7 @@ pub struct World {
 
   pub current_camera: ID,
   pub current_player: ID,
+  pub current_tilemap: ID,
 }
 
 impl World {
@@ -87,6 +88,7 @@ impl World {
 
       current_camera: 0,
       current_player: 0,
+      current_tilemap: 0,
     }
   }
 

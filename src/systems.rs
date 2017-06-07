@@ -26,6 +26,7 @@ pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   let mut world = World::new();
   world.current_player = world.new_player();
   let tm_id = world.new_tilemap();
+  world.current_tilemap = tm_id;
 
   let level_size;
   let size;
@@ -120,7 +121,6 @@ fn tilemap_update(actions: &Vec<TilemapAction>, camera: &Camera, tilemap: &mut T
   for a in actions {
     match a {
       &TilemapAction::ToggleTileCollision(screen_x, screen_y) => {
-        // TODO[ek] reconcile camera w/ screen2world again
         let world_coord = camera.screen2world(screen_x, screen_y);
         if let Some((x, y)) = tilemap.tile_for(world_coord) {
           tilemap.collisions[(y, x)] = !tilemap.collisions[(y, x)]
@@ -133,20 +133,21 @@ fn tilemap_update(actions: &Vec<TilemapAction>, camera: &Camera, tilemap: &mut T
   }
 }
 
-fn physics_update(velocity: &mut Velocity, position: &mut Position, collision: &Collision, on_ground: &mut bool, dt_seconds: f64) {
+fn physics_update(velocity: &mut Velocity, position: &mut Position,
+    collision: &Collision, tilemap: &Tilemap, on_ground: &mut bool, dt_seconds: f64)
+{
   let dpos = *velocity * dt_seconds;
-  let mut next = *position + dpos;
+  let next = *position + dpos;
   velocity.y -= GRAVITY * dt_seconds;
 
-  if false {
   let mut test = Vec2::new(next.x, position.y);
   // TODO collide with tilemap(s)
-  let mut test_intersections: Vec<Vec2u> = Vec::new(); // tilemap.intersects_box(collision.offset(next))
+  let mut test_intersections: Vec<Vec2u> = tilemap.intersects_box(&collision.offset(test));
   if test_intersections.len() > 0 {
     test.x = position.x;
   }
   test.y = next.y;
-  test_intersections = Vec::new(); // tilemap.instersects_box(collision.offset(next))
+  test_intersections = tilemap.intersects_box(&collision.offset(test));
   if test_intersections.len() > 0 {
     test.y = position.y;
     if next.y < position.y {
@@ -158,15 +159,8 @@ fn physics_update(velocity: &mut Velocity, position: &mut Position, collision: &
       velocity.y = velocity.y.min(0.);
     }
   }
-  }
 
-  // TODO remove ground check, go back to collisions
-  if next.y < 0. {
-    next.y = 0.;
-    velocity.y = 0.;
-    *on_ground = true;
-  }
-  *position = next;
+  *position = test;
 }
 
 fn camera_follow(camera_pos: &mut Position, following_pos: &Position) {
@@ -234,11 +228,11 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
     for id in &world.entities {
       // run physics
       if let (
-        Some(ref mut velocity), Some(ref mut position), Some(ref collision), Some(ref mut on_ground)
+        Some(ref mut velocity), Some(ref mut position), Some(ref collision), Some(ref mut on_ground), Some(ref tilemap)
       ) = (
-        world.velocities.get_mut(&id), world.positions.get_mut(&id), world.collisions.get(&id), world.groundables.get_mut(&id)
+        world.velocities.get_mut(&id), world.positions.get_mut(&id), world.collisions.get(&id), world.groundables.get_mut(&id), world.tilemaps.get(&world.current_tilemap)
       ) {
-        physics_update(velocity, position, collision, on_ground, sim_dt_secs);
+        physics_update(velocity, position, collision, tilemap, on_ground, sim_dt_secs);
       }
 
       // update camera follow
