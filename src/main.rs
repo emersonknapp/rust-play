@@ -71,6 +71,7 @@ fn main() {
         .filter_map(Keycode::from_scancode)
         .collect(),
       last_keys: prev_keys,
+      key_mod: sdl_context.keyboard().mod_state(),
       mouse: event_pump.mouse_state(),
       last_mouse: prev_mouse,
     };

@@ -161,13 +161,13 @@ impl World {
     id
   }
 
-  // pub fn new_static_obstacle(&mut self) -> ID {
-  //   let id = self.new_entity();
-  //   self.positions.insert(id, Position::new(0., 0.));
-  //   self.collisions.insert(id, Collision::new(
-  //     Vec2::new(0., 0.), Vec2::new(2., 2.),
-  //   ));
-  //   // self.sprites.insert(id, Sprite::new()
-  //   id
-  // }
+  pub fn new_static_obstacle(&mut self, center: Vec2, size: Vec2) -> ID {
+    let id = self.new_entity();
+    self.positions.insert(id, center);
+    self.collisions.insert(id, Collision::new(
+      Vec2::new(0., 0.), size / 2.,
+    ));
+    // self.sprites.insert(id, Sprite::new()
+    id
+  }
 }

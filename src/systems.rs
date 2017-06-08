@@ -28,6 +28,8 @@ pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   let tm_id = world.new_tilemap();
   world.current_tilemap = tm_id;
 
+  world.new_static_obstacle(Vec2::new(18., 10.), Vec2::new(5., 5.));
+
   let level_size;
   let size;
   let pos;
@@ -59,6 +61,9 @@ pub fn player_input_controller(input: &InputState, actions: &mut Vec<PlayerActio
 }
 
 fn camera_input_controller(input: &InputState, actions: &mut Vec<CameraAction>) {
+  if !input.key_mod.is_empty() {
+    return;
+  }
   if input.key_pressed(&Keycode::W) {
     actions.push(CameraAction::MoveUp);
   }
@@ -109,8 +114,8 @@ fn camera_update(actions: &Vec<CameraAction>, cam: &mut Camera) {
     match a {
       &CameraAction::MoveLeft => cam.pos.x -= 2.,
       &CameraAction::MoveRight => cam.pos.x += 2.,
-      &CameraAction::MoveUp => cam.pos.y -= 2.,
-      &CameraAction::MoveDown => cam.pos.y += 2.,
+      &CameraAction::MoveUp => cam.pos.y += 2.,
+      &CameraAction::MoveDown => cam.pos.y -= 2.,
       &CameraAction::ZoomOut => cam.fovy *= 1.25,
       &CameraAction::ZoomIn => cam.fovy *= 0.8,
     }
@@ -141,7 +146,7 @@ fn physics_update(velocity: &mut Velocity, position: &mut Position,
   velocity.y -= GRAVITY * dt_seconds;
 
   let mut test = Vec2::new(next.x, position.y);
-  // TODO collide with tilemap(s)
+  // TODO collide with multiple tilemaps?
   let mut test_intersections: Vec<Vec2u> = tilemap.intersects_box(&collision.offset(test));
   if test_intersections.len() > 0 {
     test.x = position.x;
@@ -251,7 +256,7 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
 
   // output systems
   if let Some(ref camera) = world.cameras.get(&world.current_camera) {
-    //TODO render needs drawing order
+    //TODO render needs drawing order (z coord?)
     for id in &world.entities {
       if let (Some(ref sprite), Some(ref pos)) =
              (world.sprites.get(&id), world.positions.get(&id))
@@ -262,6 +267,13 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
     for id in &world.entities {
       if let (Some(ref tilemap),) = (world.tilemaps.get(&id),) {
         render::draw_tilemap_collisions(&tilemap, &Vec::new(), renderer, camera);
+      }
+    }
+    for id in &world.entities {
+      if let (Some(ref collision), Some(ref position), None) =
+             (world.collisions.get(&id), world.positions.get(&id), world.velocities.get(&id))
+      {
+        render::draw_statics(position, collision, renderer, camera);
       }
     }
     for id in &world.entities {

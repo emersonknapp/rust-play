@@ -59,6 +59,14 @@ pub fn draw_physics(position: &Position, collision: &Collision, on_ground: bool,
   let _ = renderer.fill_rect(draw_rect);
 }
 
+pub fn draw_statics(position: &Position, collision: &Collision, renderer: &mut Renderer, cam: &Camera) {
+  let draw_color = Color::RGBA(0, 255, 255, 255);
+  let bl = collision.bottom_left() + position;
+  let draw_rect = cam.to_draw_rect(bl, collision.half_size * 2.);
+  renderer.set_draw_color(draw_color);
+  let _ = renderer.fill_rect(draw_rect);
+}
+
 pub fn draw_tilemap_collisions(tm: &Tilemap, intersected: &Vec<Vec2u>, renderer: &mut Renderer, cam: &Camera) {
   let ref c = tm.collisions;
   // Draw tilemap collision layer

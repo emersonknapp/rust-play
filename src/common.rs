@@ -2,7 +2,7 @@ extern crate nalgebra as na;
 extern crate sdl2;
 
 use std::collections::HashSet;
-use self::sdl2::keyboard::Keycode;
+use self::sdl2::keyboard::{Keycode, Mod};
 use self::sdl2::mouse::{MouseState, MouseButton};
 
 pub type Vec2 = self::na::Vector2<f64>;
@@ -48,6 +48,7 @@ impl AABB {
 pub struct InputState {
   pub keys: HashSet<Keycode>,
   pub last_keys: HashSet<Keycode>,
+  pub key_mod: Mod,
   pub mouse: MouseState,
   pub last_mouse: MouseState,
 }
