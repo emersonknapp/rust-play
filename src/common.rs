@@ -37,12 +37,12 @@ impl AABB {
   // pub fn top_left(&self) -> Vec2 {
   //   Vec2::new(self.center.x - self.half_size.x, self.center.y + self.half_size.y)
   // }
-  // pub fn intersects(&self, other: &AABB) -> bool {
-  //   ! (
-  //     ((self.center.x - other.center.x).abs() > (self.half_size.x + other.half_size.x)) ||
-  //     ((self.center.y - other.center.y).abs() > self.half_size.y + other.half_size.y)
-  //   )
-  // }
+  pub fn intersects(&self, other: &AABB) -> bool {
+    ! (
+      ((self.center.x - other.center.x).abs() > (self.half_size.x + other.half_size.x)) ||
+      ((self.center.y - other.center.y).abs() > self.half_size.y + other.half_size.y)
+    )
+  }
 }
 
 pub struct InputState {
