@@ -3,7 +3,7 @@ extern crate sdl2;
 use camera::Camera;
 use common::{Vec2, Vec2u, AABB};
 use tilemap::Tilemap;
-use components::{Position, Collision};
+use components::{Position, Collision, World};
 
 use std::path::Path;
 
@@ -59,8 +59,8 @@ pub fn draw_physics(position: &Position, collision: &Collision, on_ground: bool,
   let _ = renderer.fill_rect(draw_rect);
 }
 
-pub fn draw_statics(position: &Position, collision: &Collision, renderer: &mut Renderer, cam: &Camera) {
-  let draw_color = Color::RGBA(0, 255, 255, 255);
+pub fn draw_static(position: &Position, collision: &Collision, renderer: &mut Renderer, cam: &Camera, is_collided: bool) {
+  let draw_color = if is_collided { Color::RGBA(0, 255, 255, 255) } else { Color::RGBA(255, 255, 0, 255) };
   let bl = collision.bottom_left() + position;
   let draw_rect = cam.to_draw_rect(bl, collision.half_size * 2.);
   renderer.set_draw_color(draw_color);
@@ -104,3 +104,35 @@ pub fn draw_tilemap_collisions(tm: &Tilemap, intersected: &Vec<Vec2u>, renderer:
 //   renderer.set_draw_color(draw_color);
 //   let _ = renderer.fill_rect(draw_rect);
 // }
+
+pub fn render_system(world: &World, renderer: &mut Renderer) {
+  if let Some(ref camera) = world.cameras.get(&world.current_camera) {
+    //TODO render needs drawing order (z coord?)
+    for id in &world.entities {
+      if let (Some(ref sprite), Some(ref pos)) =
+             (world.sprites.get(&id), world.positions.get(&id))
+      {
+        draw(sprite, pos, renderer, camera);
+      }
+    }
+    for id in &world.entities {
+      if let (Some(ref tilemap),) = (world.tilemaps.get(&id),) {
+        draw_tilemap_collisions(&tilemap, &Vec::new(), renderer, camera);
+      }
+    }
+    for id in &world.entities {
+      if let (Some(ref collision), Some(ref position), None) =
+             (world.collisions.get(&id), world.positions.get(&id), world.velocities.get(&id))
+      {
+        draw_static(position, collision, renderer, camera, world.statics_collisions.contains(id));
+      }
+    }
+    for id in &world.entities {
+      if let (Some(ref collision), Some(ref position), Some(on_ground)) =
+             (world.collisions.get(&id), world.positions.get(&id), world.groundables.get(&id))
+      {
+        draw_physics(position, collision, *on_ground, renderer, camera);
+      }
+    }
+  }
+}

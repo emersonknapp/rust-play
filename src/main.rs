@@ -5,6 +5,7 @@ mod render;
 mod tilemap;
 mod components;
 mod systems;
+mod physics;
 
 use std::{time, thread};
 
