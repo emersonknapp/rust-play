@@ -26,27 +26,21 @@ use physics::simulation_systems;
 pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   let mut world = World::new();
   world.current_player = world.new_player();
-  let tm_id = world.new_tilemap();
-  world.current_tilemap = tm_id;
+  // let tm_id = world.new_tilemap();
+  // world.current_tilemap = tm_id;
 
-  world.new_static_obstacle(Vec2::new(4., 4.), Vec2::new(4., 4.));
+
+  let level_size = Vec2::new(120., 30.);
+  let bg_id = world.new_background(renderer, level_size / 2., level_size);
+
+  world.new_static_obstacle(Vec2::new(level_size.x / 2., 0.), Vec2::new(level_size.x, 4.));
   world.new_static_obstacle(Vec2::new(16., 6.), Vec2::new(4., 4.));
+  world.new_static_obstacle(Vec2::new(28., 8.), Vec2::new(4., 4.));
 
-  let level_size;
-  let size;
-  let pos;
-  {
-    let ref tiles = world.tilemaps.get(&tm_id).unwrap();
-    level_size = Vec2::new(tiles.width as f64, tiles.height as f64);
-    size = level_size * tiles.tile_size;
-    pos = level_size * tiles.tile_size / 2.;
-  }
-  let bg_id = world.new_background(renderer, pos, size);
+  world.current_camera = world.new_camera(level_size.y, Vec2::new(0., level_size.y / 2.), screen_size);
 
-  world.current_camera = world.new_camera(tm_id, screen_size);
-
-  println!("World created, player {}, tilamep {}, camera {}, background {}",
-    world.current_player, tm_id, world.current_camera, bg_id);
+  println!("World created, player {}, camera {}, background {}",
+    world.current_player, world.current_camera, bg_id);
   world
 }
 

@@ -141,14 +141,13 @@ impl World {
     id
   }
 
-  pub fn new_camera(&mut self, tilemap_id: ID, screen_size: Vec2) -> ID {
+  pub fn new_camera(&mut self, fovy: f64, pos: Vec2, screen_size: Vec2) -> ID {
     let id = self.new_entity();
-    let ref tilemap = self.tilemaps.get(&tilemap_id).unwrap();
     self.cameras.insert(id, Camera {
-      fovy: tilemap.height as f64 * tilemap.tile_size,
+      fovy: fovy,
       screen_height: screen_size.y,
       ratio: screen_size.x / screen_size.y,
-      pos: Vec2::new(0., tilemap.height as f64/ 2. * tilemap.tile_size)
+      pos: pos
     });
     self.camera_actions.insert(id, Vec::new());
     id

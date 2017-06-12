@@ -62,9 +62,9 @@ pub fn physics_step(w: &mut World, dt_seconds: f64, debug_collisions: &mut HashS
   }
 
   // detect && resolve collisions
-  // TODO there is some landing-bouncing where i expect there should not be, after first jumping onto a static obstacle but not when jumping up and down on it
-  // TODO this does double the work necessary by checking each ordering of each collision
-  // TODO this does not handle moving-to-moving collisions well, because it checks against previous position
+  // TODO land-bouncing is because backing out brings above the surface, and smaller fall-vel gives small falls
+  // TODO this does double the checks necessary kind of?
+  // TODO how does this do on moving-to-moving collisions?
   for (mover_id, ref mut update) in &mut move_updates {
     // Don't need to check collisions if the mover is not collidable
     if let Some(mover_collision) = w.collisions.get(&mover_id) {
@@ -73,8 +73,14 @@ pub fn physics_step(w: &mut World, dt_seconds: f64, debug_collisions: &mut HashS
       if found_collisions.len() > 0 {
         test_pos.x = update.pos.x;
       }
+      found_collisions.iter().map(|&(id, _)| {
+        debug_collisions.insert(id);
+      }).count();
       test_pos.y = update.next_pos.y;
       let found_collisions = find_collisions(w, *mover_id, mover_collision, &test_pos);
+      found_collisions.iter().map(|&(id, _)| {
+        debug_collisions.insert(id);
+      }).count();
       if found_collisions.len() > 0 {
         test_pos.y = update.pos.y;
         if update.next_pos.y < update.pos.y {
