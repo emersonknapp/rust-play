@@ -43,11 +43,11 @@ pub fn find_collisions(w: &World, mover_id: usize, mover_collision: &Collision, 
 }
 
 pub fn physics_step(w: &mut World, dt_seconds: f64, debug_collisions: &mut HashSet<usize>) {
-  // move everything first
-  // TODO: don't resolve tilemap collisions here, do it in collision detection & resolution phase
+  // TODO physics (jump height, fall distance) seems a little inconsistent, do some tests
   let mut move_updates: HashMap<usize, UpdateContainer> = HashMap::new();
   let mut ground_updates: HashMap<usize, bool> = HashMap::new();
 
+  // calculate potential next state
   for id in &w.entities {
     if let Some((pos, vel)) = w.get_moving_entity(*id) {
       let (next_pos, next_vel) = movement_update(pos, vel, dt_seconds);
@@ -62,27 +62,41 @@ pub fn physics_step(w: &mut World, dt_seconds: f64, debug_collisions: &mut HashS
   }
 
   // detect && resolve collisions
-  // TODO land-bouncing is because backing out brings above the surface, and smaller fall-vel gives small falls
-  // TODO this does double the checks necessary kind of?
+  // TODO this does double the checks, could resolve pairs simultaneously for cheaper
   // TODO how does this do on moving-to-moving collisions?
   for (mover_id, ref mut update) in &mut move_updates {
     // Don't need to check collisions if the mover is not collidable
     if let Some(mover_collision) = w.collisions.get(&mover_id) {
+      // First update and test X movement
       let mut test_pos = Vec2::new(update.next_pos.x, update.pos.y);
       let found_collisions = find_collisions(w, *mover_id, mover_collision, &test_pos);
+      let x_direction = (update.next_pos.x - update.pos.x).signum();
+      let mut backout: f64 = 0.;
       if found_collisions.len() > 0 {
-        test_pos.x = update.pos.x;
+        found_collisions.iter().map(|&(id, overlap)| {
+          debug_collisions.insert(id);
+          if overlap.x.signum() != x_direction && overlap.x.abs() > backout.abs() {
+            backout = overlap.x;
+          }
+        }).count();
+        test_pos.x += backout;
       }
-      found_collisions.iter().map(|&(id, _)| {
-        debug_collisions.insert(id);
-      }).count();
+
+      // Test and update Y movement
       test_pos.y = update.next_pos.y;
       let found_collisions = find_collisions(w, *mover_id, mover_collision, &test_pos);
-      found_collisions.iter().map(|&(id, _)| {
-        debug_collisions.insert(id);
-      }).count();
       if found_collisions.len() > 0 {
-        test_pos.y = update.pos.y;
+        let y_direction = (update.next_pos.y - update.pos.y).signum();
+        let mut backout: f64 = 0.;
+        found_collisions.iter().map(|&(id, overlap)| {
+          if overlap.y.signum() != y_direction && overlap.y.abs() > backout.abs() {
+            backout = overlap.y;
+          }
+          debug_collisions.insert(id);
+        }).count();
+        test_pos.y += backout;
+
+        // Additional side effects of a vertical collision
         if update.next_pos.y < update.pos.y {
           // landed
           ground_updates.insert(*mover_id, true);

@@ -123,7 +123,7 @@ impl World {
     //
     // };
     self.collisions.insert(id, Collision::new(
-      Vec2::new(0., 0.), Vec2::new(0.95, 1.45))
+      Vec2::new(0., 0.), Vec2::new(1., 2.))
     );
     self.velocities.insert(id, Velocity::new(0., 0.));
     self.groundables.insert(id, false);

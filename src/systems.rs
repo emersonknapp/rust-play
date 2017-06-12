@@ -34,7 +34,7 @@ pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   let bg_id = world.new_background(renderer, level_size / 2., level_size);
 
   world.new_static_obstacle(Vec2::new(level_size.x / 2., 0.), Vec2::new(level_size.x, 4.));
-  world.new_static_obstacle(Vec2::new(16., 6.), Vec2::new(4., 4.));
+  world.new_static_obstacle(Vec2::new(16., 6.), Vec2::new(12., 4.));
   world.new_static_obstacle(Vec2::new(28., 8.), Vec2::new(4., 4.));
 
   world.current_camera = world.new_camera(level_size.y, Vec2::new(0., level_size.y / 2.), screen_size);
