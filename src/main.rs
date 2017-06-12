@@ -2,7 +2,6 @@ extern crate sdl2;
 mod camera;
 mod common;
 mod render;
-mod tilemap;
 mod components;
 mod systems;
 mod physics;

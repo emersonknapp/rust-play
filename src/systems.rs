@@ -1,23 +1,19 @@
 extern crate sdl2;
 use self::sdl2::keyboard::Keycode;
-use self::sdl2::mouse::MouseButton;
 use self::sdl2::render::Renderer;
 
 use std::path::Path;
 use std::time;
-use std::collections::HashSet;
 
 use common::{InputState, Vec2};
 use components::{
   PlayerAction,
   CameraAction,
-  TilemapAction,
   Velocity,
   World,
   DrawObstacleTool,
 };
 use camera::Camera;
-use tilemap::Tilemap;
 use render;
 use physics::simulation_systems;
 use editor::{obstacle_tool_input};
@@ -63,33 +59,19 @@ fn camera_input_controller(input: &InputState, actions: &mut Vec<CameraAction>) 
   if !input.key_mod.is_empty() {
     return;
   }
-  if input.key_pressed(&Keycode::W) {
-    actions.push(CameraAction::MoveUp);
-  }
-  if input.key_pressed(&Keycode::A) {
-    actions.push(CameraAction::MoveLeft);
-  }
-  if input.key_pressed(&Keycode::S) {
-    actions.push(CameraAction::MoveDown);
-  }
-  if input.key_pressed(&Keycode::D) {
-    actions.push(CameraAction::MoveRight);
-  }
-  if input.key_pressed(&Keycode::Q) {
-    actions.push(CameraAction::ZoomOut);
-  }
-  if input.key_pressed(&Keycode::E) {
-    actions.push(CameraAction::ZoomIn);
-  }
-}
-
-fn tilemap_input_controller(input: &InputState, actions: &mut Vec<TilemapAction>) {
-    if input.mouse_pressed(MouseButton::Left) {
-      actions.push(TilemapAction::ToggleTileCollision(input.mouse.x(), input.mouse.y()));
+  let key_map = vec![
+    (Keycode::W, CameraAction::MoveUp),
+    (Keycode::A, CameraAction::MoveLeft),
+    (Keycode::S, CameraAction::MoveDown),
+    (Keycode::D, CameraAction::MoveRight),
+    (Keycode::Q, CameraAction::ZoomOut),
+    (Keycode::E, CameraAction::ZoomIn),
+  ];
+  for (key, action) in key_map {
+    if input.key_pressed(&key) {
+      actions.push(action);
     }
-    if input.key_down(&Keycode::LCtrl) && input.key_down(&Keycode::S) {
-      actions.push(TilemapAction::Save);
-    }
+  }
 }
 
 fn player_update(actions: &Vec<PlayerAction>, velocity: &mut Velocity, on_ground: &bool) {
@@ -120,84 +102,34 @@ fn camera_update(actions: &Vec<CameraAction>, cam: &mut Camera) {
   }
 }
 
-fn tilemap_update(actions: &Vec<TilemapAction>, camera: &Camera, tilemap: &mut Tilemap) {
-  for a in actions {
-    match a {
-      &TilemapAction::ToggleTileCollision(screen_x, screen_y) => {
-        let world_coord = camera.screen2world(screen_x, screen_y);
-        if let Some((x, y)) = tilemap.tile_for(world_coord) {
-          tilemap.collisions[(y, x)] = !tilemap.collisions[(y, x)]
-        }
-      },
-      &TilemapAction::Save => {
-        let _ = tilemap.save(Path::new("assets/modified_level.lv"));
-      }
-    }
-  }
-}
-
-
 pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Renderer, dt: time::Duration) -> time::Duration {
+  // I can't create or delete entities while iterating on them.
+  // TODO Is there a more generic way that I can queue up entity creation?
   let mut create_statics = Vec::new();
+
   for id in &world.entities {
-    // input systems
+    // input & update systems
     if let Some(ref mut actions) = world.player_actions.get_mut(&id) {
       player_input_controller(input, actions);
+      if let (Some(ref mut velocity), Some(ref on_ground)) = (world.velocities.get_mut(&id), world.groundables.get(&id)) {
+        player_update(actions, velocity, on_ground);
+      }
+      actions.clear();
     }
+
     if let Some(ref mut actions) = world.camera_actions.get_mut(&id) {
       camera_input_controller(input, actions);
-    }
-    // TODO tilemap editor tool is its own entity
-    if let Some(ref mut actions) = world.tilemap_actions.get_mut(&id) {
-      tilemap_input_controller(input, actions);
-    }
-    {
-      let camera_option = world.cameras.get(&world.current_camera);
-      if let Some(camera) = camera_option {
-        if let Some(ref mut obstool) = world.obstacle_tools.get_mut(&id) {
-          obstacle_tool_input(input, obstool, camera, &mut create_statics);
-        }
+      if let Some(ref mut camera) = world.cameras.get_mut(&id) {
+        camera_update(actions, camera);
       }
-    }
-
-    // logic systems
-    // NOTE: use all pending actions in this block, they will be cleared
-    if let (
-      Some(ref actions), Some(ref mut velocity), Some(ref on_ground)
-    ) = (
-      world.player_actions.get(&id), world.velocities.get_mut(&id), world.groundables.get(&id)
-    ) {
-      player_update(actions, velocity, on_ground);
-    }
-
-
-    // if let (
-    //   Some(ref actions), Some(ref mut tilemap), Some(ref camera)
-    // ) = (
-    //   world.tilemap_actions.get(&id), world.tilemaps.get_mut(&id), world.cameras.get(&world.current_camera),
-    // ) {
-    //   tilemap_update(actions, camera, tilemap);
-    // }
-
-    // Update camera last, so that it can be used immutably up to here
-    if let (
-      Some(ref actions), Some(ref mut camera)
-    ) = (
-      world.camera_actions.get(&id), world.cameras.get_mut(&id)
-    ) {
-      camera_update(actions, camera);
-    }
-
-
-    // Clear up all pending actions, now that they have been resolved
-    for (_, actions) in &mut world.player_actions {
       actions.clear();
     }
-    for (_, actions) in &mut world.camera_actions {
-      actions.clear();
-    }
-    for (_, actions) in &mut world.tilemap_actions {
-      actions.clear();
+
+    if let Some(camera) = world.cameras.get(&world.current_camera) {
+      // Systems that need the camera (screen-space tools)
+      if let Some(ref mut obstool) = world.obstacle_tools.get_mut(&id) {
+        obstacle_tool_input(input, obstool, camera, &mut create_statics);
+      }
     }
   }
 
@@ -205,13 +137,9 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
     world.new_static_obstacle(bbox.center, bbox.half_size * 2.);
   }
 
-
   let remainder_dt = simulation_systems(world, dt);
-
-  // TODO clear all dead entities
-
   render::render_system(world, renderer);
 
-  // return unused time, to be passed forward next frame
+  // return unused time, to be passed through next frame
   remainder_dt
 }

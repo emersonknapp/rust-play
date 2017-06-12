@@ -2,7 +2,6 @@ extern crate sdl2;
 
 use camera::Camera;
 use common::{Vec2, Vec2u, AABB};
-use tilemap::Tilemap;
 use components::{Position, Collision, World, DrawObstacleTool};
 
 use std::path::Path;
@@ -67,42 +66,6 @@ pub fn draw_static(position: &Position, collision: &Collision, renderer: &mut Re
   draw_rect(renderer, cam, collision.offset(*position).bottom_left(), collision.half_size * 2., draw_color);
 }
 
-pub fn draw_tilemap_collisions(tm: &Tilemap, intersected: &Vec<Vec2u>, renderer: &mut Renderer, cam: &Camera) {
-  let ref c = tm.collisions;
-  // Draw tilemap collision layer
-  for y in 0..c.nrows() {
-    for x in 0..c.ncols() {
-      let draw_color;
-      if c[(y, x)] {
-        draw_color = Color::RGBA(200, 140, 0, 255);
-      } else {
-        continue;
-      }
-      let bl = Vec2::new(x as f64 * tm.tile_size, y as f64 * tm.tile_size);
-      let tile_size = Vec2::new(tm.tile_size, tm.tile_size);
-      draw_rect(renderer, cam, bl, tile_size, draw_color);
-    }
-  }
-  // Debug draw collisions with the tilemap
-  for i in intersected {
-    let draw_color = Color::RGBA(0, 255, 0, 200);
-    let bl = Vec2::new(i.x as f64 * tm.tile_size, i.y as f64 * tm.tile_size);
-    let tile_size = Vec2::new(tm.tile_size, tm.tile_size);
-    let draw_rect = cam.to_draw_rect(bl, tile_size);
-    renderer.set_draw_color(draw_color);
-    let _ = renderer.fill_rect(draw_rect);
-  }
-}
-//
-// pub fn draw_tile(renderer: &mut Renderer, camera: &Camera, coord: (i32, i32), tile_size: f64) {
-//   let draw_color = Color::RGBA(0, 255, 255, 255);
-//   let bl = Vec2::new(coord.0 as f64 * tile_size, coord.1 as f64 * tile_size);
-//   let tsvec = Vec2::new(tile_size, tile_size);
-//   let draw_rect = camera.to_draw_rect(bl, tsvec);
-//   renderer.set_draw_color(draw_color);
-//   let _ = renderer.fill_rect(draw_rect);
-// }
-
 
 pub fn draw_obstacle_tool(tool: &DrawObstacleTool, camera: &Camera, renderer: &mut Renderer) {
   if let Some(start_pos) = tool.start_pos {
@@ -126,11 +89,6 @@ pub fn render_system(world: &World, renderer: &mut Renderer) {
              (world.sprites.get(&id), world.positions.get(&id))
       {
         draw(sprite, pos, renderer, camera);
-      }
-    }
-    for id in &world.entities {
-      if let (Some(ref tilemap),) = (world.tilemaps.get(&id),) {
-        draw_tilemap_collisions(&tilemap, &Vec::new(), renderer, camera);
       }
     }
     for id in &world.entities {

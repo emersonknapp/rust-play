@@ -5,7 +5,6 @@ use std::path::Path;
 
 use common::{Vec2, AABB};
 use render::Sprite;
-use tilemap::Tilemap;
 use camera::Camera;
 
 pub enum PlayerAction {
@@ -23,11 +22,6 @@ pub enum CameraAction {
   ZoomIn,
 }
 
-pub enum TilemapAction {
-  ToggleTileCollision(i32, i32),
-  Save,
-}
-
 // Components
 pub type Position = Vec2;
 
@@ -39,7 +33,6 @@ type Groundable = bool;
 
 pub type PlayerActions = Vec<PlayerAction>;
 pub type CameraActions = Vec<CameraAction>;
-pub type TilemapActions = Vec<TilemapAction>;
 
 pub struct DrawObstacleTool {
   pub pos: Vec2,
@@ -62,12 +55,10 @@ pub struct World {
   pub collisions: HashMap<ID, Collision>,
   pub velocities: HashMap<ID, Velocity>,
   pub groundables: HashMap<ID, Groundable>,
-  pub tilemaps: HashMap<ID, Tilemap>,
   pub cameras: HashMap<ID, Camera>,
 
   pub player_actions: HashMap<ID, PlayerActions>,
   pub camera_actions: HashMap<ID, CameraActions>,
-  pub tilemap_actions: HashMap<ID, TilemapActions>,
 
   pub obstacle_tools: HashMap<ID, DrawObstacleTool>,
 
@@ -89,12 +80,10 @@ impl World {
       collisions: HashMap::new(),
       velocities: HashMap::new(),
       groundables: HashMap::new(),
-      tilemaps: HashMap::new(),
       cameras: HashMap::new(),
 
       player_actions: HashMap::new(),
       camera_actions: HashMap::new(),
-      tilemap_actions: HashMap::new(),
 
       obstacle_tools: HashMap::new(),
 
@@ -144,16 +133,6 @@ impl World {
     self.velocities.insert(id, Velocity::new(0., 0.));
     self.groundables.insert(id, false);
     self.player_actions.insert(id, Vec::new());
-    id
-  }
-
-  pub fn new_tilemap(&mut self) -> ID {
-    let id = self.new_entity();
-    self.positions.insert(id, Position::new(0., 0.));
-    self.tilemaps.insert(id, Tilemap::from_file(
-      Path::new("assets/modified_level.lv")
-    ).unwrap());
-    self.tilemap_actions.insert(id, Vec::new());
     id
   }
 
