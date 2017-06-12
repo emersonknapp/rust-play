@@ -41,6 +41,18 @@ pub type PlayerActions = Vec<PlayerAction>;
 pub type CameraActions = Vec<CameraAction>;
 pub type TilemapActions = Vec<TilemapAction>;
 
+pub struct DrawObstacleTool {
+  pub pos: Vec2,
+  pub start_pos: Option<Vec2>,
+}
+impl DrawObstacleTool {
+  pub fn new() -> DrawObstacleTool {
+    DrawObstacleTool {
+      pos: Vec2::new(0., 0.),
+      start_pos: None,
+    }
+  }
+}
 
 type ID = usize;
 
@@ -56,6 +68,8 @@ pub struct World {
   pub player_actions: HashMap<ID, PlayerActions>,
   pub camera_actions: HashMap<ID, CameraActions>,
   pub tilemap_actions: HashMap<ID, TilemapActions>,
+
+  pub obstacle_tools: HashMap<ID, DrawObstacleTool>,
 
   pub entities: HashSet<ID>,
   next: ID,
@@ -82,6 +96,8 @@ impl World {
       camera_actions: HashMap::new(),
       tilemap_actions: HashMap::new(),
 
+      obstacle_tools: HashMap::new(),
+
       entities: HashSet::new(),
       next: 1,
 
@@ -93,7 +109,7 @@ impl World {
     }
   }
 
-  fn new_entity(&mut self) -> ID {
+  pub fn new_entity(&mut self) -> ID {
     let id = self.next;
     self.entities.insert(id);
     self.next += 1;

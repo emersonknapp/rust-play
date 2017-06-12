@@ -99,4 +99,7 @@ impl InputState {
   pub fn mouse_pressed(&self, b: MouseButton) -> bool {
     self.mouse.is_mouse_button_pressed(b) && !self.last_mouse.is_mouse_button_pressed(b)
   }
+  pub fn mouse_down(&self, b: MouseButton) -> bool {
+    self.mouse.is_mouse_button_pressed(b)
+  }
 }

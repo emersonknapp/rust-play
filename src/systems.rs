@@ -5,6 +5,7 @@ use self::sdl2::render::Renderer;
 
 use std::path::Path;
 use std::time;
+use std::collections::HashSet;
 
 use common::{InputState, Vec2};
 use components::{
@@ -13,11 +14,13 @@ use components::{
   TilemapAction,
   Velocity,
   World,
+  DrawObstacleTool,
 };
 use camera::Camera;
 use tilemap::Tilemap;
 use render;
 use physics::simulation_systems;
+use editor::{obstacle_tool_input};
 
 
 pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
@@ -35,6 +38,9 @@ pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   world.new_static_obstacle(Vec2::new(28., 8.), Vec2::new(4., 4.));
 
   world.current_camera = world.new_camera(level_size.y, Vec2::new(0., level_size.y / 2.), screen_size);
+
+  let obstool_id = world.new_entity();
+  world.obstacle_tools.insert(obstool_id, DrawObstacleTool::new());
 
   println!("World created, player {}, camera {}, background {}",
     world.current_player, world.current_camera, bg_id);
@@ -86,7 +92,7 @@ fn tilemap_input_controller(input: &InputState, actions: &mut Vec<TilemapAction>
     }
 }
 
-fn player_update(actions: &Vec<PlayerAction>, velocity: &mut Velocity, on_ground: &mut bool) {
+fn player_update(actions: &Vec<PlayerAction>, velocity: &mut Velocity, on_ground: &bool) {
   velocity.x = 0.;
   for a in actions {
     match a {
@@ -95,7 +101,6 @@ fn player_update(actions: &Vec<PlayerAction>, velocity: &mut Velocity, on_ground
       &PlayerAction::Jump => {
         if *on_ground {
           velocity.y += 100.;
-          *on_ground = false;
         }
       },
     }
@@ -133,6 +138,7 @@ fn tilemap_update(actions: &Vec<TilemapAction>, camera: &Camera, tilemap: &mut T
 
 
 pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Renderer, dt: time::Duration) -> time::Duration {
+  let mut create_statics = Vec::new();
   for id in &world.entities {
     // input systems
     if let Some(ref mut actions) = world.player_actions.get_mut(&id) {
@@ -145,17 +151,35 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
     if let Some(ref mut actions) = world.tilemap_actions.get_mut(&id) {
       tilemap_input_controller(input, actions);
     }
+    {
+      let camera_option = world.cameras.get(&world.current_camera);
+      if let Some(camera) = camera_option {
+        if let Some(ref mut obstool) = world.obstacle_tools.get_mut(&id) {
+          obstacle_tool_input(input, obstool, camera, &mut create_statics);
+        }
+      }
+    }
 
     // logic systems
     // NOTE: use all pending actions in this block, they will be cleared
     if let (
-      Some(ref actions), Some(ref mut velocity), Some(ref mut on_ground)
+      Some(ref actions), Some(ref mut velocity), Some(ref on_ground)
     ) = (
-      world.player_actions.get(&id), world.velocities.get_mut(&id), world.groundables.get_mut(&id)
+      world.player_actions.get(&id), world.velocities.get_mut(&id), world.groundables.get(&id)
     ) {
       player_update(actions, velocity, on_ground);
     }
 
+
+    // if let (
+    //   Some(ref actions), Some(ref mut tilemap), Some(ref camera)
+    // ) = (
+    //   world.tilemap_actions.get(&id), world.tilemaps.get_mut(&id), world.cameras.get(&world.current_camera),
+    // ) {
+    //   tilemap_update(actions, camera, tilemap);
+    // }
+
+    // Update camera last, so that it can be used immutably up to here
     if let (
       Some(ref actions), Some(ref mut camera)
     ) = (
@@ -164,13 +188,6 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
       camera_update(actions, camera);
     }
 
-    if let (
-      Some(ref actions), Some(ref mut tilemap), Some(ref camera)
-    ) = (
-      world.tilemap_actions.get(&id), world.tilemaps.get_mut(&id), world.cameras.get(&world.current_camera),
-    ) {
-      tilemap_update(actions, camera, tilemap);
-    }
 
     // Clear up all pending actions, now that they have been resolved
     for (_, actions) in &mut world.player_actions {
@@ -183,6 +200,11 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
       actions.clear();
     }
   }
+
+  for bbox in &create_statics {
+    world.new_static_obstacle(bbox.center, bbox.half_size * 2.);
+  }
+
 
   let remainder_dt = simulation_systems(world, dt);
 

@@ -6,6 +6,7 @@ mod tilemap;
 mod components;
 mod systems;
 mod physics;
+mod editor;
 
 use std::{time, thread};
 
