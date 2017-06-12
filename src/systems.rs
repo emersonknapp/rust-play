@@ -29,8 +29,8 @@ pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   let tm_id = world.new_tilemap();
   world.current_tilemap = tm_id;
 
-  world.new_static_obstacle(Vec2::new(18., 6.), Vec2::new(5., 5.));
-  world.new_static_obstacle(Vec2::new(50., 6.), Vec2::new(5., 5.));
+  world.new_static_obstacle(Vec2::new(4., 4.), Vec2::new(4., 4.));
+  world.new_static_obstacle(Vec2::new(16., 6.), Vec2::new(4., 4.));
 
   let level_size;
   let size;
@@ -99,8 +99,8 @@ fn player_update(actions: &Vec<PlayerAction>, velocity: &mut Velocity, on_ground
   velocity.x = 0.;
   for a in actions {
     match a {
-      &PlayerAction::MoveLeft => velocity.x -= 16.,
-      &PlayerAction::MoveRight => velocity.x += 16.,
+      &PlayerAction::MoveLeft => velocity.x -= 24.,
+      &PlayerAction::MoveRight => velocity.x += 24.,
       &PlayerAction::Jump => {
         if *on_ground {
           velocity.y += 100.;
