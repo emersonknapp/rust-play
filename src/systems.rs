@@ -5,17 +5,14 @@ use self::sdl2::render::Renderer;
 
 use std::path::Path;
 use std::time;
-use std::collections::HashSet;
 
-use common::{InputState, Vec2, Vec2u};
+use common::{InputState, Vec2};
 use components::{
   PlayerAction,
   CameraAction,
   TilemapAction,
   Velocity,
-  Position,
   World,
-  Collision,
 };
 use camera::Camera;
 use tilemap::Tilemap;
@@ -196,11 +193,3 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
   // return unused time, to be passed forward next frame
   remainder_dt
 }
-
-// TODO
-  // pub fn print_stats(&self) {
-  //   if let Some(ref p) = self.player.phys {
-  //       println!("pl {} {} {} {}",
-  //         self.player.center.x, self.player.center.y, p.speed.x, p.speed.y);
-  //   }
-  // }
