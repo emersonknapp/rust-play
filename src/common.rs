@@ -6,7 +6,6 @@ use self::sdl2::keyboard::{Keycode, Mod};
 use self::sdl2::mouse::{MouseState, MouseButton};
 
 pub type Vec2 = self::na::Vector2<f64>;
-pub type Vec2u = self::na::Vector2<usize>;
 
 pub struct AABB {
   pub center: Vec2,
@@ -28,9 +27,9 @@ impl AABB {
   pub fn bottom_left(&self) -> Vec2 {
     self.center - self.half_size
   }
-  pub fn top_right(&self) -> Vec2 {
-    self.center + self.half_size
-  }
+  // pub fn top_right(&self) -> Vec2 {
+  //   self.center + self.half_size
+  // }
   // pub fn bottom_right(&self) -> Vec2 {
   //   Vec2::new(self.center.x + self.half_size.x, self.center.y - self.half_size.y)
   // }

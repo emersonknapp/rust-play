@@ -15,6 +15,7 @@ use sdl2::pixels::Color;
 
 use common::{Vec2, InputState};
 use systems::{create_world, run_systems};
+use editor::{Editor, run_editor_systems};
 
 
 fn main() {
@@ -40,6 +41,7 @@ fn main() {
 
   // game init
   let mut world = create_world(&mut renderer, Vec2::new(640., 480.));
+  let mut editor = Editor::new();
   // let mut world = World::new(&mut renderer, Vec2::new(640., 480.));
 
   let sim_dt = time::Duration::from_millis(10);
@@ -85,6 +87,7 @@ fn main() {
     renderer.clear();
 
     dt_accum = run_systems(&mut world, &input, &mut renderer, sim_dt);
+    run_editor_systems(&mut world, &mut editor, &input, &mut renderer);
 
     // loop finalizing
     renderer.present();

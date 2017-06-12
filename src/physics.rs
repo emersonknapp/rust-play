@@ -21,11 +21,11 @@ fn movement_update(position: &Position, velocity: &Velocity, dt_seconds: f64) ->
 struct UpdateContainer {
   pos: Vec2,
   next_pos: Vec2,
-  vel: Vec2,
+  // vel: Vec2,
   next_vel: Vec2,
 }
 
-pub fn find_collisions(w: &World, mover_id: usize, mover_collision: &Collision, mover_pos: &Position) -> Vec<(usize, Vec2)> {
+fn find_collisions(w: &World, mover_id: usize, mover_collision: &Collision, mover_pos: &Position) -> Vec<(usize, Vec2)> {
   let mut collisions = Vec::new();
   for id in &w.entities {
     if *id == mover_id {
@@ -42,7 +42,7 @@ pub fn find_collisions(w: &World, mover_id: usize, mover_collision: &Collision, 
   collisions
 }
 
-pub fn physics_step(w: &mut World, dt_seconds: f64, debug_collisions: &mut HashSet<usize>) {
+fn physics_step(w: &mut World, dt_seconds: f64, debug_collisions: &mut HashSet<usize>) {
   // TODO physics (jump height, fall distance) seems a little inconsistent, do some tests
   let mut move_updates: HashMap<usize, UpdateContainer> = HashMap::new();
   let mut ground_updates: HashMap<usize, bool> = HashMap::new();
@@ -54,7 +54,7 @@ pub fn physics_step(w: &mut World, dt_seconds: f64, debug_collisions: &mut HashS
       move_updates.insert(*id, UpdateContainer {
         pos: *pos,
         next_pos: next_pos,
-        vel: *vel,
+        // vel: *vel,
         next_vel: next_vel,
       });
       ground_updates.insert(*id, false);

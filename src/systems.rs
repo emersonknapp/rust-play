@@ -1,8 +1,7 @@
 extern crate sdl2;
 use self::sdl2::keyboard::Keycode;
-use self::sdl2::render::Renderer;
+pub use self::sdl2::render::Renderer;
 
-use std::path::Path;
 use std::time;
 
 use common::{InputState, Vec2};
@@ -11,20 +10,15 @@ use components::{
   CameraAction,
   Velocity,
   World,
-  DrawObstacleTool,
 };
 use camera::Camera;
 use render;
 use physics::simulation_systems;
-use editor::{obstacle_tool_input};
 
 
 pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   let mut world = World::new();
   world.current_player = world.new_player();
-  // let tm_id = world.new_tilemap();
-  // world.current_tilemap = tm_id;
-
 
   let level_size = Vec2::new(120., 30.);
   let bg_id = world.new_background(renderer, level_size / 2., level_size);
@@ -35,15 +29,12 @@ pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
 
   world.current_camera = world.new_camera(level_size.y, Vec2::new(0., level_size.y / 2.), screen_size);
 
-  let obstool_id = world.new_entity();
-  world.obstacle_tools.insert(obstool_id, DrawObstacleTool::new());
-
   println!("World created, player {}, camera {}, background {}",
     world.current_player, world.current_camera, bg_id);
   world
 }
 
-pub fn player_input_controller(input: &InputState, actions: &mut Vec<PlayerAction>) {
+fn player_input_controller(input: &InputState, actions: &mut Vec<PlayerAction>) {
   if input.key_pressed(&Keycode::Space) {
     actions.push(PlayerAction::Jump);
   }
@@ -103,10 +94,6 @@ fn camera_update(actions: &Vec<CameraAction>, cam: &mut Camera) {
 }
 
 pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Renderer, dt: time::Duration) -> time::Duration {
-  // I can't create or delete entities while iterating on them.
-  // TODO Is there a more generic way that I can queue up entity creation?
-  let mut create_statics = Vec::new();
-
   for id in &world.entities {
     // input & update systems
     if let Some(ref mut actions) = world.player_actions.get_mut(&id) {
@@ -124,17 +111,6 @@ pub fn run_systems(world: &mut World, input: &InputState, renderer: &mut Rendere
       }
       actions.clear();
     }
-
-    if let Some(camera) = world.cameras.get(&world.current_camera) {
-      // Systems that need the camera (screen-space tools)
-      if let Some(ref mut obstool) = world.obstacle_tools.get_mut(&id) {
-        obstacle_tool_input(input, obstool, camera, &mut create_statics);
-      }
-    }
-  }
-
-  for bbox in &create_statics {
-    world.new_static_obstacle(bbox.center, bbox.half_size * 2.);
   }
 
   let remainder_dt = simulation_systems(world, dt);
