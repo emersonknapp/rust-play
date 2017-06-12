@@ -175,16 +175,16 @@ impl World {
     id
   }
 
-  pub fn get_dynamic_entity(&self, id: ID) -> Option<(&Position, &Collision, &Velocity)> {
-    match (self.positions.get(&id), self.collisions.get(&id), self.velocities.get(&id)) {
-      (Some(p), Some(c), Some(v)) => Some((p, c, v)),
+  pub fn get_moving_entity(&self, id: ID) -> Option<(&Position, &Velocity)> {
+    match (self.positions.get(&id), self.velocities.get(&id)) {
+      (Some(p), Some(v)) => Some((p, v)),
       _ => None
     }
   }
 
-  pub fn get_static_entity(&self, id: ID) -> Option<(&Position, &Collision)> {
-    match (self.positions.get(&id), self.collisions.get(&id), self.velocities.get(&id)) {
-      (Some(p), Some(c), None) => Some((p, c)),
+  pub fn get_collider_entity(&self, id: ID) -> Option<(&Position, &Collision)> {
+    match (self.positions.get(&id), self.collisions.get(&id)) {
+      (Some(p), Some(c)) => Some((p, c)),
       _ => None
     }
   }

@@ -29,8 +29,8 @@ pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   let tm_id = world.new_tilemap();
   world.current_tilemap = tm_id;
 
-  world.new_static_obstacle(Vec2::new(18., 10.), Vec2::new(5., 5.));
-  world.new_static_obstacle(Vec2::new(50., 10.), Vec2::new(5., 5.));
+  world.new_static_obstacle(Vec2::new(18., 6.), Vec2::new(5., 5.));
+  world.new_static_obstacle(Vec2::new(50., 6.), Vec2::new(5., 5.));
 
   let level_size;
   let size;
