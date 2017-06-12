@@ -43,6 +43,39 @@ impl AABB {
       ((self.center.y - other.center.y).abs() > self.half_size.y + other.half_size.y)
     )
   }
+
+  pub fn intersect(&self, other: &AABB) -> Option<Vec2> {
+    // x is collision on the left, -x on the right
+    // y bottom collision, -y top
+    let dv = {
+      let dsigned = other.center - self.center;
+      Vec2::new(dsigned.x.abs(), dsigned.y.abs())
+    };
+    let combined_size = self.half_size + other.half_size;
+
+    let mut x_overlap = None;
+    let mut y_overlap = None;
+    if dv.x < combined_size.x {
+      // there is an x overlap
+      let on_right = self.center.x > other.center.x;
+      x_overlap = Some(
+        (dv.x - combined_size.x) *
+        (if on_right { -1. } else { 1. })
+      );
+    }
+    if dv.y < combined_size.y {
+      let on_top = self.center.y > other.center.y;
+      y_overlap = Some(
+        (dv.y - combined_size.y) *
+        (if on_top { -1. } else { 1. })
+      );
+    }
+
+    match (x_overlap, y_overlap) {
+      (Some(xo), Some(yo)) => Some(Vec2::new(xo, yo)),
+      _ => None
+    }
+  }
 }
 
 pub struct InputState {
