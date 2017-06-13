@@ -13,6 +13,7 @@ macro_rules! rect(
     )
 );
 
+#[derive(Serialize, Deserialize)]
 pub struct AABB {
   pub center: Vec2,
   pub half_size: Vec2,

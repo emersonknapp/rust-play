@@ -1,5 +1,6 @@
 extern crate sdl2;
 use self::sdl2::mouse::MouseButton;
+use self::sdl2::keyboard::Keycode;
 use self::sdl2::render::Renderer;
 use self::sdl2::pixels::Color;
 use self::sdl2::ttf::Font;
@@ -90,6 +91,10 @@ pub fn run_editor_systems(world: &mut World, editor: &mut Editor, input: &InputS
       }
     }
 
+    // TODO factor out
+    if input.key_pressed(&Keycode::P) {
+      world.save();
+    }
   }
   for bbox in &create_statics {
     world.new_static_obstacle(bbox.center, bbox.half_size * 2.);

@@ -3,6 +3,7 @@ use common::{Vec2};
 use std::f64;
 use sdl2::rect::Rect;
 
+#[derive(Serialize, Deserialize)]
 pub struct Camera {
     pub fovy: f64,
     pub ratio: f64, // fovy * ratio = fovx

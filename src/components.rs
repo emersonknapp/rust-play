@@ -1,17 +1,25 @@
 extern crate sdl2;
+extern crate serde;
+extern crate serde_json;
 
 use std::collections::{HashMap, HashSet};
+use std::path::Path;
+use std::fs::File;
+use std::io;
+use std::io::prelude::*;
 
 use common::{Vec2, AABB};
 use render::Sprite;
 use camera::Camera;
 
+#[derive(Serialize)]
 pub enum PlayerAction {
   MoveLeft,
   MoveRight,
   Jump,
 }
 
+#[derive(Serialize)]
 pub enum CameraAction {
   MoveLeft,
   MoveRight,
@@ -36,15 +44,21 @@ pub type CameraActions = Vec<CameraAction>;
 
 type ID = usize;
 
+#[derive(Serialize)]
 pub struct World {
   pub positions: HashMap<ID, Position>,
+
+  // TODO serialize Sprite, maybe best to refer to render assets by ID and have the renderer asset manager serialize/load in a custom way
+  #[serde(skip)]
   pub sprites: HashMap<ID, Sprite>,
   pub collisions: HashMap<ID, Collision>,
   pub velocities: HashMap<ID, Velocity>,
   pub groundables: HashMap<ID, Groundable>,
   pub cameras: HashMap<ID, Camera>,
 
+  #[serde(skip)]
   pub player_actions: HashMap<ID, PlayerActions>,
+  #[serde(skip)]
   pub camera_actions: HashMap<ID, CameraActions>,
 
   pub entities: HashSet<ID>,
@@ -164,5 +178,14 @@ impl World {
       (Some(p), Some(c)) => Some((p, c)),
       _ => None
     }
+  }
+
+  pub fn save(&self) -> Result<String, io::Error> {
+    let serialized = serde_json::to_string(&self).unwrap();
+    println!("serialized = {}", serialized);
+
+    let mut file = File::create(Path::new("assets/w0.air"))?;
+    let _ = file.write_all(serialized.as_bytes());
+    Ok("good job".to_owned())
   }
 }

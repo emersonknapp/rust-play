@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate serde_derive;
 extern crate sdl2;
 mod camera;
 mod common;
