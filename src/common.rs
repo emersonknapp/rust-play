@@ -7,6 +7,12 @@ use self::sdl2::mouse::{MouseState, MouseButton};
 
 pub type Vec2 = self::na::Vector2<f64>;
 
+macro_rules! rect(
+    ($x:expr, $y:expr, $w:expr, $h:expr) => (
+        Rect::new($x as i32, $y as i32, $w as u32, $h as u32)
+    )
+);
+
 pub struct AABB {
   pub center: Vec2,
   pub half_size: Vec2,

@@ -8,6 +8,7 @@ mod physics;
 mod editor;
 
 use std::{time, thread};
+use std::path::Path;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -17,19 +18,26 @@ use common::{Vec2, InputState};
 use systems::{create_world, run_systems};
 use editor::{Editor, run_editor_systems};
 
+static REQUEST_WINDOW_WIDTH: u32 = 640;
+static REQUEST_WINDOW_HEIGHT: u32 = 480;
 
 fn main() {
   // sdl setup
   let sdl_context = sdl2::init().unwrap();
-  let _sdl_image_context = sdl2::image::init(sdl2::image::INIT_PNG);
+  let _image_context = sdl2::image::init(sdl2::image::INIT_PNG);
+  let ttf_context = sdl2::ttf::init().unwrap();
   let video_subsystem = sdl_context.video().unwrap();
-  let window = video_subsystem.window("SDL2", 640, 480)
+  let window = video_subsystem.window("SDL2", REQUEST_WINDOW_WIDTH, REQUEST_WINDOW_HEIGHT)
     .position_centered()
     .build()
     .unwrap();
+  // TODO do i have to do scaling for high dpi?
+  let (screen_width, screen_height) = (REQUEST_WINDOW_WIDTH, REQUEST_WINDOW_HEIGHT);
   let mut renderer = window.renderer()
     .accelerated().build().unwrap();
   renderer.set_blend_mode(sdl2::render::BlendMode::Blend);
+
+  let mut font = ttf_context.load_font(Path::new("assets/inconsolata.ttf"), 48).unwrap();
 
   let mut event_pump = sdl_context.event_pump().unwrap();
 
@@ -40,7 +48,7 @@ fn main() {
   let mut prev_mouse = event_pump.mouse_state();
 
   // game init
-  let mut world = create_world(&mut renderer, Vec2::new(640., 480.));
+  let mut world = create_world(&mut renderer, Vec2::new(screen_width as f64, screen_height as f64));
   let mut editor = Editor::new();
   // let mut world = World::new(&mut renderer, Vec2::new(640., 480.));
 
@@ -87,7 +95,7 @@ fn main() {
     renderer.clear();
 
     dt_accum = run_systems(&mut world, &input, &mut renderer, sim_dt);
-    run_editor_systems(&mut world, &mut editor, &input, &mut renderer);
+    run_editor_systems(&mut world, &mut editor, &input, &mut renderer, &mut font);
 
     // loop finalizing
     renderer.present();

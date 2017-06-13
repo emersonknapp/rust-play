@@ -2,6 +2,8 @@ extern crate sdl2;
 use self::sdl2::mouse::MouseButton;
 use self::sdl2::render::Renderer;
 use self::sdl2::pixels::Color;
+use self::sdl2::ttf::Font;
+use sdl2::render::TextureQuery;
 
 use components::{World};
 use common::{InputState, AABB, Vec2};
@@ -69,12 +71,25 @@ fn render_editor(world: &Editor, renderer: &mut Renderer, camera: &Camera) {
   render_obstacle_tool(&world.obstacle_tool, camera, renderer);
 }
 
-pub fn run_editor_systems(world: &mut World, editor: &mut Editor, input: &InputState, renderer: &mut Renderer) {
+pub fn run_editor_systems(world: &mut World, editor: &mut Editor, input: &InputState, renderer: &mut Renderer, font: &mut Font) {
   let mut create_statics = Vec::new();
   if let Some(camera) = world.cameras.get(&world.current_camera) {
     // Systems that need the camera (screen-space tools)
     obstacle_tool_input(input, &mut editor.obstacle_tool, camera, &mut create_statics);
     render_editor(editor, renderer, camera);
+
+    // Draw ID on each entity
+    for id in &world.entities {
+      if let Some((p, c)) = world.get_collider_entity(*id) {
+        let surface = font.render(&format!("{}", id))
+          .blended(Color::RGBA(0, 0, 0, 255)).unwrap();
+        let mut texture = renderer.create_texture_from_surface(&surface).unwrap();
+        let TextureQuery { width, height, .. } = texture.query();
+        let target = camera.to_draw_rect(p - c.half_size, Vec2::new(width as f64 / height as f64 * 1.25, 1.25));
+        renderer.copy(&mut texture, None, Some(target)).unwrap();
+      }
+    }
+
   }
   for bbox in &create_statics {
     world.new_static_obstacle(bbox.center, bbox.half_size * 2.);
