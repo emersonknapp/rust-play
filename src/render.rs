@@ -5,13 +5,14 @@ use common::{Vec2, AABB};
 use components::{Position, Collision, World};
 
 use std::path::Path;
+use std::fmt;
 
 use sdl2::image::{LoadSurface};
 use sdl2::pixels::Color;
 use sdl2::render::Renderer;
 
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 struct Rect {
   x: i32,
   y: i32,
@@ -28,7 +29,7 @@ impl Rect {
   }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Sprite {
   aabb: AABB,
   source_rect: Rect,
@@ -37,23 +38,39 @@ pub struct Sprite {
   texture: Option<sdl2::render::Texture>,
 }
 
+fn load_texture(path: &str, renderer: &Renderer) -> (sdl2::render::Texture, u32, u32) {
+  let p = Path::new(path);
+  let surf = sdl2::surface::Surface::from_file(p).unwrap();
+  (renderer.create_texture_from_surface(&surf).unwrap(), surf.width(), surf.height())
+}
+
 impl Sprite {
   pub fn new(renderer: &Renderer, tex_path: &str, aabb: AABB) -> Sprite {
-    let p = Path::new(tex_path);
-    let surf = sdl2::surface::Surface::from_file(p).unwrap();
-    let texture = renderer.create_texture_from_surface(&surf).unwrap();
+    let (tex, width, height) = load_texture(tex_path, renderer);
     Sprite {
       aabb: aabb,
-      source_rect: Rect::new(0, 0, surf.width(), surf.height()),
+      source_rect: Rect::new(0, 0, width, height),
       source_path: tex_path.to_owned(),
-      texture: Some(texture),
+      texture: Some(tex),
     }
+  }
+
+  pub fn reload_assets(&mut self, renderer: &Renderer) {
+    let (tex, width, height) = load_texture(&self.source_path[..], renderer);
+    self.source_rect = Rect::new(0, 0, width, height);
+    self.texture = Some(tex);
   }
 
   // Does sprite sheet shifting. Need to write a parameterized version w/ source_rect init as well
   // fn update(&mut self, ticks: u32) {
   //   self.source_rect.set_x((128 * ((ticks / 100) % 6) ) as i32);
   // }
+}
+
+impl fmt::Debug for Sprite {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Sprite {{ {:?}, {:?}, {} }}", self.aabb, self.source_rect, self.source_path)
+    }
 }
 
 pub fn draw_rect(renderer: &mut Renderer, camera: &Camera, bl: Vec2, size: Vec2, color: Color) {

@@ -12,14 +12,14 @@ use common::{Vec2, AABB};
 use render::Sprite;
 use camera::Camera;
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum PlayerAction {
   MoveLeft,
   MoveRight,
   Jump,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum CameraAction {
   MoveLeft,
   MoveRight,
@@ -44,7 +44,7 @@ pub type CameraActions = Vec<CameraAction>;
 
 type ID = usize;
 
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct World {
   pub positions: HashMap<ID, Position>,
 
@@ -61,11 +61,14 @@ pub struct World {
   pub current_player: ID,
   pub current_tilemap: ID,
 
-  // Runtime state (ephemeral, not necessary to serialize)
-  #[serde(skip)]
+  // It may seem like these are ephemeral,
+  // but their presence indicates a thing that can have actions
+  #[serde(default)]
   pub player_actions: HashMap<ID, PlayerActions>,
-  #[serde(skip)]
+  #[serde(default)]
   pub camera_actions: HashMap<ID, CameraActions>,
+
+  // This is truly ephemeral state
   #[serde(skip)]
   pub statics_collisions: HashSet<ID>,
 }
@@ -92,6 +95,20 @@ impl World {
 
       statics_collisions: HashSet::new(),
     }
+  }
+  pub fn from_file(path: &Path, renderer: &sdl2::render::Renderer) -> Result<World, io::Error> {
+    let mut file = File::open(path).unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+
+    let mut world: World = serde_json::from_str(&contents).unwrap();
+    // Post-deserialize initialization
+    for (_, ref mut sprite) in world.sprites.iter_mut() {
+      sprite.reload_assets(renderer);
+    }
+
+    println!("deserialized = {:?}", world);
+    Ok(world)
   }
 
   pub fn new_entity(&mut self) -> ID {

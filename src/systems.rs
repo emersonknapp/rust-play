@@ -3,6 +3,7 @@ use self::sdl2::keyboard::Keycode;
 pub use self::sdl2::render::Renderer;
 
 use std::time;
+use std::path::Path;
 
 use common::{InputState, Vec2};
 use components::{
@@ -17,6 +18,11 @@ use physics::simulation_systems;
 
 
 pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
+  // Try loading, fall back to default creation on failure
+  if let Ok(world) = World::from_file(&Path::new("assets/w0.air"), renderer) {
+    return world;
+  }
+
   let mut world = World::new();
   world.current_player = world.new_player();
 
