@@ -8,13 +8,33 @@ use std::path::Path;
 
 use sdl2::image::{LoadSurface};
 use sdl2::pixels::Color;
-use sdl2::rect::Rect;
 use sdl2::render::Renderer;
 
+
+#[derive(Serialize)]
+struct Rect {
+  x: i32,
+  y: i32,
+  width: u32,
+  height: u32,
+}
+
+impl Rect {
+  fn new(x: i32, y: i32, width: u32, height: u32) -> Rect {
+    Rect { x: x, y: y, width: width, height: height }
+  }
+  fn to_sdl_rect(&self) -> sdl2::rect::Rect {
+    sdl2::rect::Rect::new(self.x, self.y, self.width, self.height)
+  }
+}
+
+#[derive(Serialize)]
 pub struct Sprite {
   aabb: AABB,
-  texture: sdl2::render::Texture,
-  source_rect: sdl2::rect::Rect,
+  source_rect: Rect,
+  source_path: String,
+  #[serde(skip)]
+  texture: Option<sdl2::render::Texture>,
 }
 
 impl Sprite {
@@ -24,8 +44,9 @@ impl Sprite {
     let texture = renderer.create_texture_from_surface(&surf).unwrap();
     Sprite {
       aabb: aabb,
-      texture: texture,
       source_rect: Rect::new(0, 0, surf.width(), surf.height()),
+      source_path: tex_path.to_owned(),
+      texture: Some(texture),
     }
   }
 
@@ -42,14 +63,16 @@ pub fn draw_rect(renderer: &mut Renderer, camera: &Camera, bl: Vec2, size: Vec2,
 }
 
 fn draw_sprite(sprite: &Sprite, pos: &Position, renderer: &mut Renderer, cam: &Camera) {
+  if let Some(ref tex) = sprite.texture {
     let bl = pos + sprite.aabb.center - sprite.aabb.half_size;
     let draw_rect = cam.to_draw_rect(bl, sprite.aabb.half_size * 2.);
 
     let _ = renderer.copy(
-      &sprite.texture,
-      Some(sprite.source_rect),
+      tex,
+      Some(sprite.source_rect.to_sdl_rect()),
       Some(draw_rect)
     );
+  }
 }
 
 fn draw_physics(position: &Position, collision: &Collision, on_ground: bool, renderer: &mut Renderer, cam: &Camera) {

@@ -48,18 +48,11 @@ type ID = usize;
 pub struct World {
   pub positions: HashMap<ID, Position>,
 
-  // TODO serialize Sprite, maybe best to refer to render assets by ID and have the renderer asset manager serialize/load in a custom way
-  #[serde(skip)]
   pub sprites: HashMap<ID, Sprite>,
   pub collisions: HashMap<ID, Collision>,
   pub velocities: HashMap<ID, Velocity>,
   pub groundables: HashMap<ID, Groundable>,
   pub cameras: HashMap<ID, Camera>,
-
-  #[serde(skip)]
-  pub player_actions: HashMap<ID, PlayerActions>,
-  #[serde(skip)]
-  pub camera_actions: HashMap<ID, CameraActions>,
 
   pub entities: HashSet<ID>,
   next: ID,
@@ -68,6 +61,12 @@ pub struct World {
   pub current_player: ID,
   pub current_tilemap: ID,
 
+  // Runtime state (ephemeral, not necessary to serialize)
+  #[serde(skip)]
+  pub player_actions: HashMap<ID, PlayerActions>,
+  #[serde(skip)]
+  pub camera_actions: HashMap<ID, CameraActions>,
+  #[serde(skip)]
   pub statics_collisions: HashSet<ID>,
 }
 
