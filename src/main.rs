@@ -12,6 +12,7 @@ mod editor;
 use std::time;
 use std::path::Path;
 use std::sync::mpsc;
+use std::sync;
 use std::io;
 use std::io::Write;
 use std::thread;
@@ -26,6 +27,41 @@ use editor::{Editor, run_editor_systems};
 
 static REQUEST_WINDOW_WIDTH: u32 = 640;
 static REQUEST_WINDOW_HEIGHT: u32 = 480;
+
+#[derive(Debug)]
+enum ShellCommand {
+  Exit,
+  DeleteEntity(usize),
+}
+
+fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
+  let mut iter = input.split_whitespace();
+  match iter.next() {
+    Some(command) => {
+      match command {
+        "exit" => {
+          tx.send(ShellCommand::Exit);
+        },
+        "delent" => {
+          match iter.next() {
+            Some(idstr) => {
+              match idstr.parse::<usize>() {
+                Ok(id) => {
+                  tx.send(ShellCommand::DeleteEntity(id));
+                },
+                Err(_) => {},
+              };
+            },
+            None => {},
+          }
+        },
+        _ => {},
+      };
+    },
+    None => {},
+  };
+}
+
 
 fn main() {
   // sdl setup
@@ -74,18 +110,7 @@ fn main() {
     'shell: loop {
       match io::stdin().read_line(&mut input) {
         Ok(n) => {
-          let mut iter = input.split_whitespace();
-          match iter.next() {
-            Some(command) => {
-              match command {
-                "exit" => {
-                  tx.send(1);
-                },
-                _ => {},
-              }
-            },
-            None => continue,
-          };
+          parse_input(&input[..], &tx);
         },
         Err(error) => println!("error: {}", error),
       }
@@ -125,8 +150,16 @@ fn main() {
 
     match rx.try_recv() {
       Ok(x) => {
-        if x == 1 {
-          break 'running;
+        match x  {
+          ShellCommand::Exit => {
+            break 'running;
+          },
+          ShellCommand::DeleteEntity(id) => {
+            world.delete_entity(id);
+          },
+          cmd => {
+            println!("UNhandled shell cmd {:?}", cmd);
+          },
         }
       },
       Err(_) => {},

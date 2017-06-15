@@ -118,21 +118,19 @@ impl World {
     id
   }
 
-  // fn delete_entity(&mut self, id: ID) {
-  //   self.positions.remove(&id);
-  //   self.sprites.remove(&id);
-  //   self.collisions.remove(&id);
-  //   self.velocities.remove(&id);
-  //   self.groundables.remove(&id);
-  //   self.tilemaps.remove(&id);
-  //   self.cameras.remove(&id);
-  //
-  //   self.player_actions.remove(&id);
-  //   self.camera_actions.remove(&id);
-  //   self.tilemap_actions.remove(&id);
-  //
-  //   self.entities.remove(&id);
-  // }
+  pub fn delete_entity(&mut self, id: ID) {
+    self.positions.remove(&id);
+    self.sprites.remove(&id);
+    self.collisions.remove(&id);
+    self.velocities.remove(&id);
+    self.groundables.remove(&id);
+    self.cameras.remove(&id);
+
+    self.player_actions.remove(&id);
+    self.camera_actions.remove(&id);
+
+    self.entities.remove(&id);
+  }
 
   pub fn new_player(&mut self) -> ID {
     let id = self.new_entity();
