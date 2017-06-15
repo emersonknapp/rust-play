@@ -9,8 +9,12 @@ mod systems;
 mod physics;
 mod editor;
 
-use std::{time, thread};
+use std::time;
 use std::path::Path;
+use std::sync::mpsc;
+use std::io;
+use std::io::Write;
+use std::thread;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -64,6 +68,33 @@ fn main() {
   let mut phys_counter = 0;
   let mut frame_counter_accumulator = time::Duration::new(0, 0);
 
+  let (tx, rx) = mpsc::channel();
+  thread::spawn(move || {
+    let mut input = String::new();
+    'shell: loop {
+      match io::stdin().read_line(&mut input) {
+        Ok(n) => {
+          let mut iter = input.split_whitespace();
+          match iter.next() {
+            Some(command) => {
+              match command {
+                "exit" => {
+                  tx.send(1);
+                },
+                _ => {},
+              }
+            },
+            None => continue,
+          };
+        },
+        Err(error) => println!("error: {}", error),
+      }
+      print!(">> ");
+      io::stdout().flush();
+      input.clear();
+    }
+  });
+
   thread::sleep(target_frame_time);
   'running: loop {
     let dt = last_time.elapsed();
@@ -92,6 +123,15 @@ fn main() {
       break 'running;
     }
 
+    match rx.try_recv() {
+      Ok(x) => {
+        if x == 1 {
+          break 'running;
+        }
+      },
+      Err(_) => {},
+    }
+
     // prepare for drawing
     renderer.set_draw_color(Color::RGBA(0,0,0,255));
     renderer.clear();
@@ -107,15 +147,15 @@ fn main() {
     // Debug output
     frame_counter += 1;
     frame_counter_accumulator += dt;
-    if frame_counter_accumulator.as_secs() > 1 {
-      println!("cycles {} {}", frame_counter, phys_counter);
-      // world.print_stats();
-      println!();
-
-      frame_counter_accumulator -= time::Duration::from_secs(1);
-      frame_counter = 0;
-      phys_counter = 0;
-    }
+    // if frame_counter_accumulator.as_secs() > 1 {
+    //   println!("cycles {} {}", frame_counter, phys_counter);
+    //   // world.print_stats();
+    //   println!();
+    //
+    //   frame_counter_accumulator -= time::Duration::from_secs(1);
+    //   frame_counter = 0;
+    //   phys_counter = 0;
+    // }
 
     // Sleep until next frame
     if let Some(sleep_duration) = target_frame_time.checked_sub(last_time.elapsed()) {

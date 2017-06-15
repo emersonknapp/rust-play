@@ -107,7 +107,7 @@ impl World {
       sprite.reload_assets(renderer);
     }
 
-    println!("deserialized = {:?}", world);
+    // println!("deserialized = {:?}", world);
     Ok(world)
   }
 
