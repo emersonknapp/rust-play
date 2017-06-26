@@ -17,6 +17,7 @@ use std::sync;
 use std::io;
 use std::io::Write;
 use std::thread;
+use std::env;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -32,10 +33,13 @@ static REQUEST_WINDOW_HEIGHT: u32 = 480;
 
 #[derive(Debug)]
 enum ShellCommand {
+  None,
   Exit,
   DeleteEntity(usize),
   Save(String),
   Load(String),
+  DelAll,
+  SetPhysPlay(bool),
 }
 
 fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
@@ -46,7 +50,7 @@ fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
         "exit" => {
           tx.send(ShellCommand::Exit);
         },
-        "delent" => {
+        "del" => {
           match iter.next() {
             Some(idstr) => {
               match idstr.parse::<usize>() {
@@ -79,16 +83,31 @@ fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
             }
           }
         },
+        "clear" => {
+          tx.send(ShellCommand::DelAll);
+        },
+        "phys" => {
+          match iter.next() {
+            Some(onoff) => {
+              if onoff == "on" {
+                tx.send(ShellCommand::SetPhysPlay(true));
+              } else if onoff == "off" {
+                tx.send(ShellCommand::SetPhysPlay(false));
+              } else {
+                println!("on/off");
+              }
+            },
+            None => {}
+          }
+        },
         _ => {
           println!("I didn't understand {}", input);
+          tx.send(ShellCommand::None);
         },
       };
     },
     None => {},
   };
-}
-
-fn shell_system(world: &mut World, cmd: ShellCommand) {
 }
 
 
@@ -104,6 +123,7 @@ fn main() {
     .unwrap();
   // TODO do i have to do scaling for high dpi?
   let (screen_width, screen_height) = (REQUEST_WINDOW_WIDTH, REQUEST_WINDOW_HEIGHT);
+  let screen_size = Vec2::new(screen_width as f64, screen_height as f64);
   let mut renderer = window.renderer()
     .accelerated().build().unwrap();
   renderer.set_blend_mode(sdl2::render::BlendMode::Blend);
@@ -119,7 +139,25 @@ fn main() {
   let mut prev_mouse = event_pump.mouse_state();
 
   // game init
-  let mut world = create_world(&mut renderer, Vec2::new(screen_width as f64, screen_height as f64));
+  let mut world = create_world(&mut renderer, screen_size);
+  let mut args = env::args();
+  let _ = args.next(); // flush binary name
+  match args.next() {
+    Some(level) => {
+      let filename = format!("assets/{}.air", level);
+      println!("{}", filename);
+      match World::from_file(Path::new(&filename), &mut renderer) {
+        Ok(w) => {
+          world = w;
+        },
+        _ => {
+          println!("No such level")
+        },
+      }
+    },
+    None => {}
+  }
+
   let mut editor = Editor::new();
   // let mut world = World::new(&mut renderer, Vec2::new(640., 480.));
 
@@ -179,7 +217,8 @@ fn main() {
 
     match rx.try_recv() {
       Ok(cmd) => {
-        match cmd  {
+        match cmd {
+          ShellCommand::None => {},
           ShellCommand::Exit => {
             world.alive = false;
           },
@@ -187,7 +226,7 @@ fn main() {
             world.delete_entity(id);
           },
           ShellCommand::Save(filename) => {
-            world.save(&filename);
+            let _ = world.save(&filename);
           },
           ShellCommand::Load(filename) => {
             let filename = format!("assets/{}.air", filename);
@@ -196,13 +235,19 @@ fn main() {
                 world = w;
               },
               _ => {
-                println!("No such level found")
+                println!("No such level")
               },
             }
+          },
+          ShellCommand::DelAll => {
+            world = World::new_with_camera(20., screen_size);
+          },
+          ShellCommand::SetPhysPlay(onoff) => {
+            world.simulate = onoff;
           }
         }
         print!(">> ");
-        io::stdout().flush();
+        let _ = io::stdout().flush();
       },
       Err(_) => {},
     }

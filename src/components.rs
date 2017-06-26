@@ -50,6 +50,8 @@ type EMap<T> = HashMap<ID, T>;
 pub struct World {
   #[serde(default)]
   pub alive: bool,
+  #[serde(default)]
+  pub simulate: bool,
 
   pub positions: HashMap<ID, Position>,
 
@@ -84,6 +86,7 @@ impl World {
   pub fn new() -> World {
     World {
       alive: true,
+      simulate: true,
       positions: HashMap::new(),
       sprites: HashMap::new(),
       collisions: HashMap::new(),
@@ -105,6 +108,13 @@ impl World {
       statics_collisions: HashSet::new(),
     }
   }
+
+  pub fn new_with_camera(fovy: f64, screen_size: Vec2) -> World {
+    let mut world = World::new();
+    world.current_camera = world.new_camera(fovy, Vec2::new(0., 0.), screen_size);
+    world
+  }
+
   pub fn from_file(path: &Path, renderer: &sdl2::render::Renderer) -> Result<World, io::Error> {
     let mut file = File::open(path)?;
     let mut contents = String::new();
@@ -159,12 +169,7 @@ impl World {
 
   pub fn new_camera(&mut self, fovy: f64, pos: Vec2, screen_size: Vec2) -> ID {
     let id = self.new_entity();
-    self.cameras.insert(id, Camera {
-      fovy: fovy,
-      screen_height: screen_size.y,
-      ratio: screen_size.x / screen_size.y,
-      pos: pos
-    });
+    self.cameras.insert(id, Camera::new(fovy, pos, screen_size));
     self.camera_actions.insert(id, Vec::new());
     id
   }

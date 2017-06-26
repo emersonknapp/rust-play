@@ -37,6 +37,7 @@ impl Editor {
 }
 
 fn obstacle_tool_input(input: &InputState, tool: &mut DrawObstacleTool, camera: &Camera, create: &mut Vec<AABB>) {
+  let min_axis = 0.5;
   tool.pos = camera.screen2world(input.mouse.x(), input.mouse.y());
   if let Some(start_pos) = tool.start_pos {
     if !input.mouse_down(MouseButton::Left) {
@@ -44,8 +45,12 @@ fn obstacle_tool_input(input: &InputState, tool: &mut DrawObstacleTool, camera: 
         center: (tool.pos + start_pos) / 2.,
         half_size: (tool.pos - start_pos).abs() / 2.,
       };
-      println!("create({}, {}) ({}, {})", bbox.center.x, bbox.center.y, bbox.half_size.x, bbox.half_size.y);
-      create.push(bbox);
+      if bbox.half_size.x >= min_axis && bbox.half_size.y >= min_axis {
+        println!("create({}, {}) ({}, {})", bbox.center.x, bbox.center.y, bbox.half_size.x, bbox.half_size.y);
+        create.push(bbox);
+      } else {
+        println!("too small");
+      }
       tool.start_pos = None;
     }
   } else {
@@ -93,7 +98,7 @@ pub fn run_editor_systems(world: &mut World, editor: &mut Editor, input: &InputS
 
     // TODO factor out
     if input.key_pressed(&Keycode::P) {
-      world.save("assets/world0.air");
+      let _ = world.save("default");
     }
   }
   for bbox in &create_statics {

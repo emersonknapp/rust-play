@@ -11,6 +11,14 @@ pub struct Camera {
     pub pos: Vec2,
 }
 impl Camera {
+  pub fn new(fovy: f64, pos: Vec2, screen_size: Vec2) -> Camera {
+    Camera {
+      fovy: fovy,
+      ratio: screen_size.x / screen_size.y,
+      screen_height: screen_size.y,
+      pos: pos,
+    }
+  }
   pub fn to_draw_rect(&self, bl: Vec2, size: Vec2) -> Rect {
     let fovx = self.ratio * self.fovy;
     let u2s = self.screen_height as f64 / self.fovy;
