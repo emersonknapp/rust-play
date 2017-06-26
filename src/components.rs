@@ -48,6 +48,9 @@ type EMap<T> = HashMap<ID, T>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct World {
+  #[serde(default)]
+  pub alive: bool,
+
   pub positions: HashMap<ID, Position>,
 
   pub sprites: EMap<Sprite>,
@@ -80,6 +83,7 @@ pub struct World {
 impl World {
   pub fn new() -> World {
     World {
+      alive: true,
       positions: HashMap::new(),
       sprites: HashMap::new(),
       collisions: HashMap::new(),
@@ -102,7 +106,7 @@ impl World {
     }
   }
   pub fn from_file(path: &Path, renderer: &sdl2::render::Renderer) -> Result<World, io::Error> {
-    let mut file = File::open(path).unwrap();
+    let mut file = File::open(path)?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
 
@@ -111,6 +115,7 @@ impl World {
     for (_, ref mut sprite) in world.sprites.iter_mut() {
       sprite.reload_assets(renderer);
     }
+    world.alive = true;
 
     // println!("deserialized = {:?}", world);
     Ok(world)
@@ -212,11 +217,13 @@ impl World {
     }
   }
 
-  pub fn save(&self) -> Result<String, io::Error> {
+  pub fn save(&self, filename: &str) -> Result<String, io::Error> {
     let serialized = serde_json::to_string(&self).unwrap();
     println!("serialized = {}", serialized);
 
-    let mut file = File::create(Path::new("assets/w0.air"))?;
+    let filename = format!("assets/{}.air", filename);
+
+    let mut file = File::create(Path::new(&filename))?;
     let _ = file.write_all(serialized.as_bytes());
     Ok("good job".to_owned())
   }

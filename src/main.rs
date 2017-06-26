@@ -25,6 +25,7 @@ use sdl2::pixels::Color;
 use common::{Vec2, InputState};
 use systems::{create_world, run_systems};
 use editor::{Editor, run_editor_systems};
+use components::{World};
 
 static REQUEST_WINDOW_WIDTH: u32 = 640;
 static REQUEST_WINDOW_HEIGHT: u32 = 480;
@@ -33,6 +34,8 @@ static REQUEST_WINDOW_HEIGHT: u32 = 480;
 enum ShellCommand {
   Exit,
   DeleteEntity(usize),
+  Save(String),
+  Load(String),
 }
 
 fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
@@ -56,6 +59,26 @@ fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
             None => {},
           }
         },
+        "save" => {
+          match iter.next() {
+            Some(filename) => {
+              tx.send(ShellCommand::Save(filename.to_owned()));
+            },
+            None => {
+              println!("Say a filename");
+            }
+          }
+        },
+        "load" => {
+          match iter.next() {
+            Some(filename) => {
+              tx.send(ShellCommand::Load(filename.to_owned()));
+            },
+            None => {
+              println!("Say a filename");
+            }
+          }
+        },
         _ => {
           println!("I didn't understand {}", input);
         },
@@ -63,6 +86,9 @@ fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
     },
     None => {},
   };
+}
+
+fn shell_system(world: &mut World, cmd: ShellCommand) {
 }
 
 
@@ -117,13 +143,13 @@ fn main() {
         },
         Err(error) => println!("error: {}", error),
       }
-      print!(">> ");
-      io::stdout().flush();
       input.clear();
     }
   });
 
   thread::sleep(target_frame_time);
+  print!(">> ");
+  io::stdout().flush();
   'running: loop {
     let dt = last_time.elapsed();
     last_time = time::Instant::now();
@@ -152,15 +178,31 @@ fn main() {
     }
 
     match rx.try_recv() {
-      Ok(x) => {
-        match x  {
+      Ok(cmd) => {
+        match cmd  {
           ShellCommand::Exit => {
-            break 'running;
+            world.alive = false;
           },
           ShellCommand::DeleteEntity(id) => {
             world.delete_entity(id);
           },
+          ShellCommand::Save(filename) => {
+            world.save(&filename);
+          },
+          ShellCommand::Load(filename) => {
+            let filename = format!("assets/{}.air", filename);
+            match World::from_file(Path::new(&filename), &mut renderer) {
+              Ok(w) => {
+                world = w;
+              },
+              _ => {
+                println!("No such level found")
+              },
+            }
+          }
         }
+        print!(">> ");
+        io::stdout().flush();
       },
       Err(_) => {},
     }
@@ -177,19 +219,9 @@ fn main() {
     prev_keys = input.keys;
     prev_mouse = input.mouse;
 
-    // Debug output
-    frame_counter += 1;
-    frame_counter_accumulator += dt;
-    // if frame_counter_accumulator.as_secs() > 1 {
-    //   println!("cycles {} {}", frame_counter, phys_counter);
-    //   // world.print_stats();
-    //   println!();
-    //
-    //   frame_counter_accumulator -= time::Duration::from_secs(1);
-    //   frame_counter = 0;
-    //   phys_counter = 0;
-    // }
-
+    if !world.alive {
+      break 'running;
+    }
     // Sleep until next frame
     if let Some(sleep_duration) = target_frame_time.checked_sub(last_time.elapsed()) {
       thread::sleep(sleep_duration);

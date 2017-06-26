@@ -93,7 +93,7 @@ pub fn run_editor_systems(world: &mut World, editor: &mut Editor, input: &InputS
 
     // TODO factor out
     if input.key_pressed(&Keycode::P) {
-      world.save();
+      world.save("assets/world0.air");
     }
   }
   for bbox in &create_statics {
