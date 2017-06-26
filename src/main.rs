@@ -40,6 +40,8 @@ enum ShellCommand {
   Load(String),
   DelAll,
   SetPhysPlay(bool),
+  Show,
+  SetVelocity(usize, Vec2),
 }
 
 fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
@@ -100,6 +102,33 @@ fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
             None => {}
           }
         },
+        "setvel" => {
+          let mut id: usize;
+          let mut x: f64;
+          let mut y: f64;
+
+          match iter.next() {
+            None => {},
+            Some(idstr) => {
+              match idstr.parse::<usize>() {
+                Err(_) => {},
+                Ok(id) => {
+          match iter.next() {
+            None => {},
+            Some(xstr) => {
+              match xstr.parse::<f64>() {
+                Err(_) => {},
+                Ok(x) => {
+          match iter.next() {
+            None => {},
+            Some(ystr) => {
+              match ystr.parse::<f64>() {
+                Err(_) => {},
+                Ok(y) => {
+                  tx.send(ShellCommand::SetVelocity(id, Vec2::new(x, y)));
+                },
+          } }, } }, } }, } }, } }, };
+        }
         _ => {
           println!("I didn't understand {}", input);
           tx.send(ShellCommand::None);
@@ -244,6 +273,14 @@ fn main() {
           },
           ShellCommand::SetPhysPlay(onoff) => {
             world.simulate = onoff;
+            println!("Set simulate to {}", onoff);
+          },
+          ShellCommand::Show => {
+            // TODO print world state
+          },
+          ShellCommand::SetVelocity(id, vel) => {
+            println!("Setting vel for {} to ({}, {})", id, vel.x, vel.y);
+            world.velocities.insert(id, vel);
           }
         }
         print!(">> ");
@@ -256,7 +293,7 @@ fn main() {
     renderer.set_draw_color(Color::RGBA(0,0,0,255));
     renderer.clear();
 
-    dt_accum = run_systems(&mut world, &input, &mut renderer, sim_dt);
+    dt_accum = run_systems(&mut world, &input, &mut renderer, dt);
     run_editor_systems(&mut world, &mut editor, &input, &mut renderer, &mut font);
 
     // loop finalizing

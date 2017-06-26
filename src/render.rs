@@ -119,8 +119,8 @@ pub fn render_system(world: &World, renderer: &mut Renderer) {
       }
     }
     for id in &world.entities {
-      if let (Some(ref collision), Some(ref position), None) =
-             (world.collisions.get(&id), world.positions.get(&id), world.velocities.get(&id))
+      if let (Some(ref collision), Some(ref position)) =
+             (world.collisions.get(&id), world.positions.get(&id))
       {
         draw_static(position, collision, renderer, camera, world.statics_collisions.contains(id));
       }
