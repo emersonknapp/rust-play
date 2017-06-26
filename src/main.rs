@@ -8,6 +8,7 @@ mod components;
 mod systems;
 mod physics;
 mod editor;
+mod platforms;
 
 use std::time;
 use std::path::Path;
@@ -55,7 +56,9 @@ fn parse_input(input: &str, tx: &mpsc::Sender<ShellCommand>) {
             None => {},
           }
         },
-        _ => {},
+        _ => {
+          println!("I didn't understand {}", input);
+        },
       };
     },
     None => {},
@@ -156,9 +159,6 @@ fn main() {
           },
           ShellCommand::DeleteEntity(id) => {
             world.delete_entity(id);
-          },
-          cmd => {
-            println!("UNhandled shell cmd {:?}", cmd);
           },
         }
       },

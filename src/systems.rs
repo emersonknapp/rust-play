@@ -19,24 +19,19 @@ use physics::simulation_systems;
 
 pub fn create_world(renderer: &mut Renderer, screen_size: Vec2) -> World {
   // Try loading, fall back to default creation on failure
-  if let Ok(world) = World::from_file(&Path::new("assets/w0.air"), renderer) {
-    return world;
+  let mut world;
+  if let Ok(w) = World::from_file(&Path::new("assets/w0.air"), renderer) {
+    world = w;
+  } else {
+    world = World::new();
   }
 
-  let mut world = World::new();
   world.current_player = world.new_player();
 
-  let level_size = Vec2::new(120., 30.);
-  let bg_id = world.new_background(renderer, level_size / 2., level_size);
+  world.new_mover_block(Vec2::new(0., 10.), Vec2::new(20., 10.), 4.);
 
-  world.new_static_obstacle(Vec2::new(level_size.x / 2., 0.), Vec2::new(level_size.x, 4.));
-  world.new_static_obstacle(Vec2::new(16., 6.), Vec2::new(12., 4.));
-  world.new_static_obstacle(Vec2::new(28., 8.), Vec2::new(4., 4.));
-
-  world.current_camera = world.new_camera(level_size.y, Vec2::new(0., level_size.y / 2.), screen_size);
-
-  println!("World created, player {}, camera {}, background {}",
-    world.current_player, world.current_camera, bg_id);
+  println!("World created, player {}, camera {}",
+    world.current_player, world.current_camera );
   world
 }
 

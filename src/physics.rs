@@ -3,6 +3,7 @@ use std::collections::{HashSet, HashMap};
 
 use common::{Vec2};
 use components::{Velocity, Position, World, Collision};
+use platforms::mover_blocks;
 // use tilemap::Tilemap;
 
 const GRAVITY: f64 = 500.;
@@ -140,15 +141,17 @@ pub fn simulation_systems(w: &mut World, dt: time::Duration) -> time::Duration {
 
   while dt_accum >= sim_dt {
     physics_step(w, sim_dt_secs, &mut statics_collisions);
+    mover_blocks(w, sim_dt_secs);
     dt_accum -= sim_dt;
   }
 
-  // update camera follow
+  // update camera follow TODO have a camera follower component that knows about what to follow
   if let (Some(ref mut camera), Some(ref player_pos)) =
          (w.cameras.get_mut(&w.current_camera), w.positions.get(&w.current_player))
   {
     camera_follow(&mut camera.pos, player_pos)
   }
+
   // TODO reactions (damage, animation, sound) to physics collisions?
 
   w.statics_collisions = statics_collisions;

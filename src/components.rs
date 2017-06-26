@@ -11,6 +11,7 @@ use std::io::prelude::*;
 use common::{Vec2, AABB};
 use render::Sprite;
 use camera::Camera;
+use platforms::MoverBlock;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum PlayerAction {
@@ -43,16 +44,19 @@ pub type CameraActions = Vec<CameraAction>;
 
 
 type ID = usize;
+type EMap<T> = HashMap<ID, T>;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct World {
   pub positions: HashMap<ID, Position>,
 
-  pub sprites: HashMap<ID, Sprite>,
-  pub collisions: HashMap<ID, Collision>,
-  pub velocities: HashMap<ID, Velocity>,
+  pub sprites: EMap<Sprite>,
+  pub collisions: EMap<Collision>,
+  pub velocities: EMap<Velocity>,
   pub groundables: HashMap<ID, Groundable>,
   pub cameras: HashMap<ID, Camera>,
+  #[serde(default)]
+  pub mover_blocks: HashMap<ID, MoverBlock>,
 
   pub entities: HashSet<ID>,
   next: ID,
@@ -82,6 +86,7 @@ impl World {
       velocities: HashMap::new(),
       groundables: HashMap::new(),
       cameras: HashMap::new(),
+      mover_blocks: EMap::new(),
 
       player_actions: HashMap::new(),
       camera_actions: HashMap::new(),
@@ -167,6 +172,19 @@ impl World {
       "assets/background.png",
       AABB::new(center, size / 2.),
     ));
+    id
+  }
+
+  pub fn new_mover_block(&mut self, start: Vec2, end: Vec2, travel_time: f64) -> ID {
+    let id = self.new_entity();
+    self.mover_blocks.insert(id, MoverBlock {
+      start: start,
+      end: end,
+      travel_time: travel_time
+    });
+    self.positions.insert(id, start);
+    self.collisions.insert(id, Collision::new(Vec2::new(0., 0.), Vec2::new(4., 1.)));
+
     id
   }
 
